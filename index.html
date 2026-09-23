@@ -351,6 +351,50 @@
   .settings input[type="file"] { display: none; }
   @media (max-width: 520px) { .kv > div { flex-direction: column; gap: 2px; } .kv dt { width: auto; } }
 
+  /* ============================ statistics ============================ */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 780px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .bar-row { display: grid; grid-template-columns: 116px minmax(0,1fr) 44px; gap: 10px; align-items: center; padding: 5px 0; }
+  .bar-label { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { background: var(--surface-2); border-radius: 999px; height: 12px; overflow: hidden; }
+  .bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--accent); min-width: 2px; }
+  .bar-fill.pending { background: var(--pending); }
+  .bar-fill.done    { background: var(--done); }
+  .bar-fill.none    { background: var(--muted); }
+  .bar-fill.high    { background: var(--high); }
+  .bar-fill.medium  { background: var(--medium); }
+  .bar-fill.low     { background: var(--low); }
+  .bar-num { font-size: 13px; font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .chart { display: flex; align-items: flex-end; gap: 4px; height: 140px; }
+  .chart .col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 5px; }
+  .chart .bar { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 3px; }
+  .chart .bar.zero { background: var(--surface-2); }
+  .chart .lab { font-size: 9.5px; color: var(--muted); white-space: nowrap; }
+  .chart .val { font-size: 10px; font-weight: 650; color: var(--muted); }
+
+  /* ============================ report ============================ */
+  .report-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .report-filters .field { margin: 0; }
+  .report-filters input[type="date"] { padding: 8px 10px; }
+
+  .report-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .report-table th, .report-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .report-table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .report-table td.num, .report-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .report-table tbody tr:last-child td { border-bottom: 0; }
+
+  /* Printing a report: strip the app chrome and keep only the report body. */
+  @media print {
+    .sidebar, .banner, .page-head, .toasts, #reportBuilder { display: none !important; }
+    #issuesArea, #usersArea, #settingsArea, #statisticsArea { display: none !important; }
+    .shell { grid-template-columns: 1fr !important; }
+    .main { padding: 0 !important; }
+    #reportPrint { border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+    .report-table th, .report-table td { border-color: #bbb !important; }
+  }
+
   /* ============================ responsive ============================ */
   @media (max-width: 900px) {
     .status-select { max-width: 100%; }
@@ -570,6 +614,12 @@
         </svg>
         <span>My reports</span><span class="count" id="navCountMine">0</span>
       </button>
+      <button class="nav-item" data-view="statistics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3v18h18"/><path d="M7 15v3M12 10v8M17 6v12"/>
+        </svg>
+        <span>Statistics</span>
+      </button>
 
       <div class="nav-label" id="adminLabel" hidden>Administration</div>
       <button class="nav-item" data-view="users" id="navUsers" hidden>
@@ -578,6 +628,13 @@
           <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
         </svg>
         <span>Users</span><span class="count" id="navCountUsers">0</span>
+      </button>
+      <button class="nav-item" data-view="report" id="navReport" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 2v6h6"/><path d="M9 15h6M9 11h3"/>
+        </svg>
+        <span>Reports</span>
       </button>
       <button class="nav-item" data-view="settings" id="navSettings" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
@@ -685,6 +742,71 @@
         </div>
         <div id="userList"></div>
       </div>
+    </div>
+
+    <!-- statistics area (everyone) -->
+    <div id="statisticsArea" hidden>
+      <div class="stats" id="statCards"></div>
+
+      <div class="grid2">
+        <section class="card">
+          <h3>By status</h3>
+          <div id="byStatus"></div>
+        </section>
+        <section class="card">
+          <h3>By priority</h3>
+          <div id="byPriority"></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h3>Reported per day &mdash; last 14 days</h3>
+        <div class="chart" id="activityChart"></div>
+      </section>
+
+      <section class="card">
+        <h3>Top reporters</h3>
+        <div id="byReporter"></div>
+      </section>
+    </div>
+
+    <!-- reports area (admin only) -->
+    <div id="reportArea" hidden>
+      <section class="card" id="reportBuilder">
+        <h3>Build a report</h3>
+        <p class="card-sub">Leave the dates empty to include every issue.</p>
+        <div class="report-filters">
+          <div class="field">
+            <label for="repFrom">From</label>
+            <input type="date" id="repFrom" />
+          </div>
+          <div class="field">
+            <label for="repTo">To</label>
+            <input type="date" id="repTo" />
+          </div>
+          <div class="field">
+            <label for="repStatus">Status</label>
+            <select id="repStatus">
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="done">Done</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+          <button class="btn primary" id="repBuild">Generate report</button>
+          <button class="btn" id="repCsv">Download CSV</button>
+          <button class="btn" id="repPrint">Print / Save as PDF</button>
+        </div>
+      </section>
+
+      <section class="card" id="reportPrint">
+        <div class="report-head">
+          <h3 id="repTitle">Issue report</h3>
+          <p class="card-sub" id="repMeta"></p>
+        </div>
+        <div id="repSummary"></div>
+        <div id="repTableWrap"></div>
+      </section>
     </div>
 
     <!-- settings area (admin only) -->
@@ -1632,6 +1754,7 @@ create policy issues_delete_admin on public.issues
     // Admin-only navigation and actions
     el("navUsers").hidden = !isAdmin();
     el("navSettings").hidden = !isAdmin();
+    el("navReport").hidden = !isAdmin();
     el("adminLabel").hidden = !isAdmin();
     el("newBtn").hidden = !can("create");
     el("modeLabel").textContent = api.mode === "demo" ? "Demo (local)" : "Connected";
@@ -1662,15 +1785,19 @@ create policy issues_delete_admin on public.issues
       b.setAttribute("aria-current", b.dataset.view === view ? "page" : "false");
     });
 
-    el("issuesArea").hidden   = view !== "board" && view !== "mine";
-    el("usersArea").hidden    = view !== "users";
-    el("settingsArea").hidden = view !== "settings";
+    el("issuesArea").hidden     = view !== "board" && view !== "mine";
+    el("usersArea").hidden      = view !== "users";
+    el("settingsArea").hidden   = view !== "settings";
+    el("statisticsArea").hidden = view !== "statistics";
+    el("reportArea").hidden     = view !== "report";
 
     var titles = {
-      board:    ["Dashboard", "All issues reported in the system."],
-      mine:     ["My reports", "Issues you have reported."],
-      users:    ["Users", "Manage who can access the system and what they can do."],
-      settings: ["Settings", "Back up, restore and maintain the system."]
+      board:      ["Dashboard", "All issues reported in the system."],
+      mine:       ["My reports", "Issues you have reported."],
+      statistics: ["Statistics", "A summary of every issue, for review."],
+      users:      ["Users", "Manage who can access the system and what they can do."],
+      report:     ["Reports", "Build a printable report for a period."],
+      settings:   ["Settings", "Back up, restore and maintain the system."]
     };
     var t = titles[view] || titles.board;
     el("pageTitle").textContent = t[0];
@@ -1679,7 +1806,9 @@ create policy issues_delete_admin on public.issues
     var isIssuesView = view === "board" || view === "mine";
     el("newBtn").hidden = !isIssuesView || !can("create");
 
-    if (view === "users") renderUsers();
+    if (view === "statistics") renderStatistics();
+    else if (view === "report") renderReport();
+    else if (view === "users") renderUsers();
     else if (view === "settings") renderStatus();
     else render();
   }
@@ -1817,6 +1946,8 @@ create policy issues_delete_admin on public.issues
       // Keep the admin users table's report counts accurate.
       if (isAdmin() && view === "users") renderUsers();
       if (isAdmin() && view === "settings") renderStatus();
+      if (view === "statistics") renderStatistics();
+      if (isAdmin() && view === "report") renderReport();
     }).catch(function (e) {
       toast("Could not load issues: " + friendly(e.message));
     });
@@ -1901,7 +2032,7 @@ create policy issues_delete_admin on public.issues
 
   document.querySelectorAll(".nav-item").forEach(function (b) {
     b.addEventListener("click", function () {
-      var adminOnly = b.dataset.view === "users" || b.dataset.view === "settings";
+      var adminOnly = b.dataset.view === "users" || b.dataset.view === "settings" || b.dataset.view === "report";
       if (adminOnly && !isAdmin()) { toast("Admins only."); return; }
       setView(b.dataset.view);
     });
@@ -2275,6 +2406,232 @@ create policy issues_delete_admin on public.issues
       busy(btn, false);
       toast("Error: " + friendly(ex.message));
     });
+  });
+
+  /* ==================================================================
+     STATISTICS (everyone) — a read-only summary for review
+     ================================================================== */
+  function computeStats(list) {
+    var byStatus = { pending: 0, done: 0, none: 0 };
+    var byPriority = { low: 0, medium: 0, high: 0 };
+    var byReporter = {};
+
+    list.forEach(function (it) {
+      if (byStatus[it.status] === undefined) byStatus[it.status] = 0;
+      byStatus[it.status]++;
+
+      if (byPriority[it.priority] === undefined) byPriority[it.priority] = 0;
+      byPriority[it.priority]++;
+
+      var who = it.createdByEmail || "(unknown)";
+      byReporter[who] = (byReporter[who] || 0) + 1;
+    });
+
+    var total = list.length;
+    var done = byStatus.done || 0;
+
+    return {
+      total: total,
+      done: done,
+      rate: total ? Math.round(done / total * 100) : 0,
+      openHigh: list.filter(function (it) { return it.priority === "high" && it.status !== "done"; }).length,
+      byStatus: byStatus,
+      byPriority: byPriority,
+      byReporter: byReporter
+    };
+  }
+
+  function barList(obj, total, opts) {
+    opts = opts || {};
+    var keys = Object.keys(obj);
+    if (!keys.length) return '<p class="card-note">Nothing to show yet.</p>';
+
+    keys.sort(opts.order
+      ? function (a, b) { return opts.order.indexOf(a) - opts.order.indexOf(b); }
+      : function (a, b) { return obj[b] - obj[a]; });
+
+    return keys.map(function (k) {
+      var n = obj[k];
+      var pct = total ? Math.round(n / total * 100) : 0;
+      var label = opts.labels ? (opts.labels[k] || k) : k;
+      return '<div class="bar-row">' +
+        '<span class="bar-label" title="' + esc(label) + '">' + esc(label) + '</span>' +
+        '<span class="bar-track"><span class="bar-fill ' + esc(k) + '" style="width:' + pct + '%"></span></span>' +
+        '<span class="bar-num">' + n + '</span>' +
+      '</div>';
+    }).join("");
+  }
+
+  var PRIORITY_LABELS = { low: "Low", medium: "Medium", high: "High" };
+
+  function renderStatistics() {
+    var s = computeStats(issues);
+
+    el("statCards").innerHTML = [
+      ["", s.total, "Total"],
+      ["pending", s.byStatus.pending || 0, "Pending"],
+      ["done", s.byStatus.done || 0, "Done"],
+      ["none", s.byStatus.none || 0, "None"],
+      ["high", s.openHigh, "Open high priority"],
+      ["", s.rate + "%", "Completion"]
+    ].map(function (c) {
+      return '<div class="stat ' + c[0] + '"><div class="n">' + c[1] + '</div><div class="l">' + c[2] + '</div></div>';
+    }).join("");
+
+    el("byStatus").innerHTML = barList(s.byStatus, s.total, {
+      order: ["pending", "none", "done"], labels: STATUS_LABELS
+    });
+    el("byPriority").innerHTML = barList(s.byPriority, s.total, {
+      order: ["high", "medium", "low"], labels: PRIORITY_LABELS
+    });
+
+    var reporters = s.byReporter;
+    var topKeys = Object.keys(reporters)
+      .sort(function (a, b) { return reporters[b] - reporters[a]; })
+      .slice(0, 8);
+    var top = {};
+    topKeys.forEach(function (k) { top[k] = reporters[k]; });
+    el("byReporter").innerHTML = barList(top, s.total);
+
+    // Issues reported on each of the last 14 days.
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var series = [];
+    for (var i = 13; i >= 0; i--) {
+      var start = today.getTime() - i * 86400000;
+      var end = start + 86400000;
+      series.push({
+        d: new Date(start),
+        n: issues.filter(function (it) {
+          return it.createdAt && it.createdAt >= start && it.createdAt < end;
+        }).length
+      });
+    }
+    var max = Math.max.apply(null, series.map(function (x) { return x.n; }).concat([1]));
+
+    el("activityChart").innerHTML = series.map(function (x) {
+      var h = x.n ? Math.max(Math.round(x.n / max * 100), 4) : 3;
+      return '<div class="col" title="' + x.d.toLocaleDateString() + ": " + x.n + '">' +
+        '<span class="val">' + (x.n || "") + '</span>' +
+        '<span class="bar' + (x.n ? "" : " zero") + '" style="height:' + h + '%"></span>' +
+        '<span class="lab">' + x.d.getDate() + "/" + (x.d.getMonth() + 1) + '</span>' +
+      '</div>';
+    }).join("");
+  }
+
+  /* ==================================================================
+     REPORTS (admin) — a printable summary
+     ================================================================== */
+  function reportList() {
+    var from = el("repFrom").value ? new Date(el("repFrom").value + "T00:00:00").getTime() : null;
+    var to   = el("repTo").value   ? new Date(el("repTo").value   + "T23:59:59").getTime() : null;
+    var st   = el("repStatus").value;
+
+    return issues.filter(function (it) {
+      var t = it.createdAt || 0;
+      if (from !== null && t < from) return false;
+      if (to !== null && t > to) return false;
+      if (st !== "all" && it.status !== st) return false;
+      return true;
+    }).sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+  }
+
+  function reportSummary(list) {
+    var s = computeStats(list);
+    var rows = [
+      ["Total issues", s.total],
+      ["Pending", s.byStatus.pending || 0],
+      ["Done", s.byStatus.done || 0],
+      ["None", s.byStatus.none || 0],
+      ["High priority", s.byPriority.high || 0],
+      ["Medium priority", s.byPriority.medium || 0],
+      ["Low priority", s.byPriority.low || 0],
+      ["Completion", s.rate + "%"]
+    ];
+    return '<table class="report-table"><tbody>' + rows.map(function (r) {
+      return '<tr><th style="width:70%">' + esc(r[0]) + '</th><td class="num">' + esc(String(r[1])) + '</td></tr>';
+    }).join("") + '</tbody></table><div style="height:20px"></div>';
+  }
+
+  function renderReport() {
+    var list = reportList();
+
+    var period = (el("repFrom").value || el("repTo").value)
+      ? (el("repFrom").value || "the beginning") + " to " + (el("repTo").value || "today")
+      : "all time";
+    var stFilter = el("repStatus").value === "all"
+      ? "all statuses"
+      : "status: " + statusLabel(el("repStatus").value);
+
+    el("repMeta").textContent =
+      "Generated " + new Date().toLocaleString() + " by " + currentUser.email +
+      " \u00b7 Period: " + period + " \u00b7 " + stFilter;
+
+    el("repSummary").innerHTML = reportSummary(list);
+
+    if (!list.length) {
+      el("repTableWrap").innerHTML = '<p class="card-note">No issues match this report.</p>';
+      return;
+    }
+
+    var rows = list.map(function (it, i) {
+      return '<tr>' +
+        '<td class="num">' + (i + 1) + '</td>' +
+        '<td>' + esc(it.title) + '</td>' +
+        '<td>' + esc(statusLabel(it.status)) + '</td>' +
+        '<td>' + esc(PRIORITY_LABELS[it.priority] || it.priority) + '</td>' +
+        '<td>' + esc(it.createdByEmail || "\u2014") + '</td>' +
+        '<td>' + (it.createdAt ? new Date(it.createdAt).toLocaleDateString() : "\u2014") + '</td>' +
+      '</tr>';
+    }).join("");
+
+    el("repTableWrap").innerHTML =
+      '<table class="report-table">' +
+        '<thead><tr>' +
+          '<th class="num">#</th><th>Title</th><th>Status</th><th>Priority</th>' +
+          '<th>Reported by</th><th>Created</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>';
+  }
+
+  el("repBuild").addEventListener("click", function () {
+    if (!isAdmin()) return;
+    renderReport();
+    toast("Report updated");
+  });
+
+  ["repFrom", "repTo", "repStatus"].forEach(function (id) {
+    el(id).addEventListener("change", function () {
+      if (isAdmin() && view === "report") renderReport();
+    });
+  });
+
+  el("repCsv").addEventListener("click", function () {
+    if (!isAdmin()) return;
+    var list = reportList();
+    if (!list.length) { toast("Nothing to export for this report."); return; }
+
+    var lines = [["#", "Title", "Status", "Priority", "Reported by", "Created"].map(csvCell).join(",")];
+    list.forEach(function (it, i) {
+      lines.push([
+        i + 1,
+        it.title,
+        statusLabel(it.status),
+        PRIORITY_LABELS[it.priority] || it.priority,
+        it.createdByEmail || "",
+        it.createdAt ? new Date(it.createdAt).toISOString() : ""
+      ].map(csvCell).join(","));
+    });
+
+    downloadFile("issue-report-" + stamp() + ".csv",
+                 "\uFEFF" + lines.join("\r\n"), "text/csv;charset=utf-8");
+    toast("Report downloaded — " + list.length + " issues");
+  });
+
+  el("repPrint").addEventListener("click", function () {
+    if (!isAdmin()) return;
+    renderReport();
+    window.print();
   });
 
   /* ==================================================================
