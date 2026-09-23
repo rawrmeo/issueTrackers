@@ -105,5 +105,13 @@ where email = 'you@example.com';
 | Badge still says **Demo (local)** | The two config values are empty, or the page was loaded offline so the Supabase CDN script didn't load. Re-check step 3 and hard-refresh with `Ctrl` + `F5`. |
 | *Database tables are missing* | Step 2 wasn't run, or it failed. Re-run the SQL; it is safe to repeat. |
 | *Only an administrator can edit issue details.* | Expected — that's the `guard_issue_update` trigger. Promote the account in step 3 above. |
+| **Too many attempts** when registering | Supabase's built-in email sender allows only a few messages per hour, and every sign-up sends a confirmation email — so repeated tries make it worse. Wait ~1 hour, or turn off **Confirm email** (below) while testing. |
+| *This email hasn't been confirmed yet* | The confirmation email is on. Either click the link, or turn off **Confirm email**. |
+| *That email is already registered* after retrying | Your earlier attempt created the user even though the email never arrived. Sign in with it, or delete it under **Authentication → Users** and register again. |
 | Reset email never arrives | Supabase's built-in sender is rate-limited. Wait, check spam, or connect your own SMTP under **Authentication → Emails → SMTP Settings**. |
 | Reset link opens an error page | Your site's URL isn't in **Redirect URLs** (step 3). Add it exactly, with the trailing `/`. |
+
+> **While developing, turn off email confirmation.** In the dashboard open
+> **Authentication → Sign In / Providers → Email** and switch **Confirm email**
+> off. New accounts are then usable immediately and **no email is sent**, so the
+> rate limit never gets in your way. Turn it back on before you go live.
