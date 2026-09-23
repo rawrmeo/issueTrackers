@@ -26,6 +26,14 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
+-- Extra profile fields. "add column if not exists" means this also upgrades
+-- a database that was created before these columns existed.
+alter table public.profiles add column if not exists avatar_url           text        not null default '';
+alter table public.profiles add column if not exists notify_new_issue     boolean     not null default true;
+alter table public.profiles add column if not exists notify_status_done   boolean     not null default true;
+alter table public.profiles add column if not exists notify_high_priority boolean     not null default true;
+alter table public.profiles add column if not exists notifications_seen_at timestamptz not null default 'epoch';
+
 
 -- =====================================================================
 --  2. ISSUES — the actual tracker records
@@ -34,13 +42,32 @@ create table if not exists public.issues (
   id               uuid primary key default gen_random_uuid(),
   title            text        not null,
   description      text        not null default '',
-  status           text        not null default 'pending' check (status in ('pending','done')),
+  status           text        not null default 'none',
   priority         text        not null default 'medium' check (priority in ('low','medium','high')),
-  created_by       uuid        not null default auth.uid() references auth.users(id) on delete cascade,
+  created_by       uuid        default auth.uid() references auth.users(id) on delete set null,
   created_by_email text        not null default '',
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
+
+-- Status values. 'none' means no status has been set yet.
+-- This replaces the older two-value constraint, so it also upgrades an
+-- existing database — run it even if the table is already there.
+alter table public.issues drop constraint if exists issues_status_check;
+alter table public.issues add constraint issues_status_check
+  check (status in ('none','pending','done'));
+
+-- New issues start with no status: a normal user reports it and an
+-- administrator moves it through Pending / Done.
+alter table public.issues alter column status set default 'none';
+
+-- Deleting a user keeps their issues on the board: the reporter link is
+-- cleared instead of the issues being removed. (Older databases used
+-- ON DELETE CASCADE, which would have destroyed them.)
+alter table public.issues alter column created_by drop not null;
+alter table public.issues drop constraint if exists issues_created_by_fkey;
+alter table public.issues add constraint issues_created_by_fkey
+  foreign key (created_by) references auth.users(id) on delete set null;
 
 create index if not exists issues_status_idx     on public.issues (status);
 create index if not exists issues_created_by_idx on public.issues (created_by);
@@ -171,6 +198,38 @@ create trigger profiles_guard_role
 
 
 -- =====================================================================
+--  ADMINS CAN DELETE A USER
+--  Deleting the auth.users row also removes the matching profile row
+--  (ON DELETE CASCADE on profiles.id) while the user's issues stay on
+--  the board, because issues.created_by is now ON DELETE SET NULL.
+--  SECURITY DEFINER is what lets this reach the auth schema; the admin
+--  check inside is what keeps it safe to expose over the public API.
+-- =====================================================================
+create or replace function public.admin_delete_user(target uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Only an administrator can delete users.';
+  end if;
+  if target = auth.uid() then
+    raise exception 'You cannot delete your own account.';
+  end if;
+  -- Detach their issues first, so they survive even on a database that
+  -- still has the older ON DELETE CASCADE constraint.
+  update public.issues set created_by = null where created_by = target;
+  delete from auth.users where id = target;
+end;
+$$;
+
+revoke all on function public.admin_delete_user(uuid) from public;
+grant execute on function public.admin_delete_user(uuid) to authenticated;
+
+
+-- =====================================================================
 --  5. ROW LEVEL SECURITY
 -- =====================================================================
 alter table public.profiles enable row level security;
@@ -224,11 +283,9 @@ create policy issues_insert_auth on public.issues
 create policy issues_update_admin on public.issues
   for update using (public.is_admin());
 
--- Normal users can update their own rows; the trigger above limits the
--- change to the status column only.
-create policy issues_update_own on public.issues
-  for update using (created_by = auth.uid())
-  with check (created_by = auth.uid());
+-- Normal users cannot update issues at all. They report them with the
+-- status "None", and an administrator moves them through Pending / Done.
+-- (guard_issue_update stays as a second line of defence.)
 
 -- Only admins can delete.
 create policy issues_delete_admin on public.issues

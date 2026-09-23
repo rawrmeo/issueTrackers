@@ -1,117 +1,198 @@
-# Supabase — the database half
+# Issue Tracker
 
-`index.html` runs fine on its own (demo mode). This folder is what turns it into
-a **real, shared** tracker: real accounts, emailed password resets, and one
-Postgres database everybody signs in to.
+A role-based issue tracking system. Two kinds of account:
 
-```
-supabase/
-├── migrations/
-│   └── 20260922120000_init.sql   # tables, roles, triggers and Row Level Security
-└── README.md                     # this file
-```
+| Role | Can do |
+| --- | --- |
+| **Administrator** | Everything: report, **edit**, **delete**, search, change status, and manage users (promote/demote). |
+| **Normal user** | Report issues — each one starts as **None** — and search. Cannot change a status, edit details, or delete. |
 
-The same schema is also kept in [`../supabase-schema.sql`](../supabase-schema.sql)
-and embedded in `index.html` (shown in the app's **Connect Supabase** dialog).
-**If you change one, change all three.**
+The rules are enforced in **both** places: the interface hides what a role
+cannot do, and the database (Row Level Security + triggers) rejects it anyway.
 
-## 1. Create the project
+---
 
-1. Sign up at <https://supabase.com/dashboard> (free tier is plenty).
-2. **New project** → give it a name, generate a database password and save it,
-   pick the region closest to you, then wait ~2 minutes.
+## What's in this folder
 
-## 2. Create the tables
+| File | What it is |
+| --- | --- |
+| `index.html` | The whole app — login, dashboard, issues, users. Open it in a browser. |
+| `supabase-schema.sql` | The database: tables, triggers and security policies. Paste it into Supabase. |
+| `supabase/` | The same schema as a migration, plus a Supabase setup guide. |
+| `PUBLISHING.md` | How to put it online for free — GitHub Pages or Vercel. |
+| `vercel.json` | Ready-made Vercel config (static site, no build step). |
+| `steps/` | Older tutorial versions of the tracker, kept for reference. |
 
-Either way is fine — they run the same SQL.
+`index.html` is also its own setup guide: the **Connect Supabase** button
+(banner or setup panel) shows the same SQL with a copy button.
 
-**Dashboard (no tools needed)**
+---
 
-1. **SQL Editor → New query**.
-2. Paste the whole of [`migrations/20260922120000_init.sql`](migrations/20260922120000_init.sql)
-   (or `../supabase-schema.sql`).
-3. Press **Run**. You should see *Success. No rows returned*.
+## Running it in 30 seconds (no setup)
 
-**Supabase CLI**
+Just open `index.html` in a browser.
 
-```powershell
-# once per machine
-npm install -g supabase
+Because no database is connected yet, it runs in **demo mode** and keeps
+everything in that browser's local storage. Two accounts are ready:
 
-# in the project root
-supabase init                 # creates supabase/config.toml if missing
-supabase link --project-ref <your-project-ref>
-supabase db push
-```
+| Email | Password | Role |
+| --- | --- | --- |
+| `admin@demo.com` | `admin123` | Administrator |
+| `user@demo.com` | `user123` | Normal user |
 
-## 3. Point the app at it
+Log in as each one to see how the permissions differ. Anything you create in
+demo mode stays on that one browser — it is not shared with anyone else.
 
-1. In the dashboard go to **Project Settings → API Keys** and copy:
-   - the **Project URL** — `https://<ref>.supabase.co`
-   - the **public / anon** (or **publishable**) key, starting `sb_publishable_…`
-2. Open `index.html` and fill the config block at the top of the `<script>`:
+---
+
+## Connecting a real Supabase database
+
+Do this when you want real accounts and one shared board for everyone.
+
+1. **Create the project.** Sign up at [supabase.com](https://supabase.com)
+   and create a free project.
+
+2. **Create the tables.** In the project, open **SQL Editor → New query**,
+   paste the whole of `supabase-schema.sql`, and press **Run**. You should see
+   *Success. No rows returned*. The file is safe to run more than once.
+
+3. **Copy your keys.** Open **Project Settings → API** and copy:
+   - the **Project URL** (looks like `https://abcdefgh.supabase.co`)
+   - the **anon public** key
+
+4. **Paste them into the app.** Open `index.html` and fill in the two
+   variables near the top of the `<script>` block:
 
    ```js
-   var SUPABASE_URL      = "https://<ref>.supabase.co";
-   var SUPABASE_ANON_KEY = "sb_publishable_...";
+   var SUPABASE_URL      = "https://abcdefgh.supabase.co";
+   var SUPABASE_ANON_KEY = "eyJhbGciOi...";
    ```
 
-3. In **Authentication → URL Configuration** set:
-   - **Site URL**: your main published address — e.g.
-     `https://YOUR-USERNAME.github.io/mini-issue-tracker/` (GitHub Pages) or
-     `https://mini-issue-tracker.vercel.app/` (Vercel).
-   - **Redirect URLs**: every address you publish to, plus `http://localhost:8000/`
-     for local testing, e.g.
-     ```
-     https://YOUR-USERNAME.github.io/mini-issue-tracker/
-     https://mini-issue-tracker.vercel.app/
-     http://localhost:8000/
-     ```
+5. **Reload the page.** The demo banner disappears and you can register.
+   Creating an account now works across every browser, and your issues are
+   shared.
 
-   See [`../PUBLISHING.md`](../PUBLISHING.md) for how to get each of those URLs.
+### About the anon key
 
-When the yellow **Demo (local)** badge in the sidebar changes to **Connected**,
-the app is talking to Supabase.
+It is designed to be public and is safe in this file. Supabase protects your
+data with Row Level Security, not by hiding the key.
 
-## What the schema protects
+### Make yourself an admin
 
-| Rule | How |
-| --- | --- |
-| Any signed-in user sees the whole board | `issues_select_auth` |
-| You can only report an issue as yourself | `issues_insert_auth` (`auth.uid() = created_by`) |
-| Normal users may change **only** the status | `issues_update_own` + the `guard_issue_update` trigger |
-| Admins may edit and delete anything | `issues_update_admin`, `issues_delete_admin` |
-| Only admins read all profiles / change roles | `profiles_select_admin`, `profiles_update_admin` + the `guard_profile_role` trigger |
-
-Every rule lives in the database, so it holds even if someone edits the page in
-DevTools. The `anon` key is public on purpose — RLS is what protects the data.
-
-**Making the first admin:** the register form lets the very first account choose
-the Administrator role. If you'd rather not allow that, register everyone as a
-normal user and promote the first admin by hand in the SQL Editor:
+If you already registered as a normal user, open the SQL Editor and run:
 
 ```sql
-update public.profiles set role = 'admin'
-where email = 'you@example.com';
+update public.profiles set role = 'admin' where email = 'you@example.com';
 ```
 
-> **Never** put the `service_role` / `secret` key in `index.html`. That key
-> bypasses Row Level Security entirely.
+You can also register as an Administrator from the start — the register form
+has a role picker. Note that letting anyone self-register as an admin is fine
+for a class project, but in production you would lock that down and promote
+people from the Users screen instead.
 
-## Troubleshooting
+---
 
-| Symptom | Fix |
+## Putting it online
+
+The app is one static file, so hosting is free and quick.
+[`PUBLISHING.md`](PUBLISHING.md) walks through both hosts step by step:
+
+- **GitHub Pages** — simplest; gives you a URL like
+  `https://YOUR-USERNAME.github.io/mini-issue-tracker/`.
+- **Vercel** — imports the same GitHub repo, redeploys on every push, and gives
+  each change its own preview URL. The included `vercel.json` needs no editing.
+
+Either way, if you are using Supabase, add the live URL to Supabase's
+**Authentication → URL Configuration** so password-reset links return to it.
+
+---
+
+## Using the app
+
+**The avatar menu (top right)** is where personal things live:
+
+| Menu item | What it does |
 | --- | --- |
-| Badge still says **Demo (local)** | The two config values are empty, or the page was loaded offline so the Supabase CDN script didn't load. Re-check step 3 and hard-refresh with `Ctrl` + `F5`. |
-| *Database tables are missing* | Step 2 wasn't run, or it failed. Re-run the SQL; it is safe to repeat. |
-| *Only an administrator can edit issue details.* | Expected — that's the `guard_issue_update` trigger. Promote the account in step 3 above. |
-| **Too many attempts** when registering | Supabase's built-in email sender allows only a few messages per hour, and every sign-up sends a confirmation email — so repeated tries make it worse. Wait ~1 hour, or turn off **Confirm email** (below) while testing. |
-| *This email hasn't been confirmed yet* | The confirmation email is on. Either click the link, or turn off **Confirm email**. |
-| *That email is already registered* after retrying | Your earlier attempt created the user even though the email never arrived. Sign in with it, or delete it under **Authentication → Users** and register again. |
-| Reset email never arrives | Supabase's built-in sender is rate-limited. Wait, check spam, or connect your own SMTP under **Authentication → Emails → SMTP Settings**. |
-| Reset link opens an error page | Your site's URL isn't in **Redirect URLs** (step 3). Add it exactly, with the trailing `/`. |
+| **My Profile** | Your name and picture (both editable), plus your email and role. |
+| **My Issues** | The issues you reported. |
+| **Notifications** | Activity feed, with unread highlighting. The bell shows the count. |
+| **Settings** | Notification preferences — what you want to be told about. |
+| **Sign Out** | Logs you out. |
 
-> **While developing, turn off email confirmation.** In the dashboard open
-> **Authentication → Sign In / Providers → Email** and switch **Confirm email**
-> off. New accounts are then usable immediately and **no email is sent**, so the
-> rate limit never gets in your way. Turn it back on before you go live.
+- **Dashboard** — every issue, with counts for Total / Pending / Done / None /
+  High priority.
+- **My reports** — only the issues you reported.
+- **Statistics** *(everyone)* — totals, completion rate, breakdowns by status and
+  priority, top reporters, and a 14-day activity chart. Read-only.
+- **Reports** *(admins only)* — filter by date range and status, then
+  **Print / Save as PDF** or **Download CSV**.
+- **Users** *(admins only)* — change a role inline, **edit** a user (name and
+  role), or **delete** them. You cannot change your own role or delete your own
+  account, so you cannot lock yourself out. Deleting a user keeps their issues
+  on the board.
+- **Settings** *(admins only)* — download a **JSON backup** (restorable) or a
+  **CSV** for Excel, restore from a JSON backup (add or replace), delete all
+  issues, and see system status.
+- **Search** — matches the title, description and reporter. The priority
+  dropdown narrows the list further.
+- **Status** — pick **Pending**, **Done** or **None** from the dropdown.
+  **Admins only**: a normal user reports an issue (it starts as **None**) and
+  cannot change it afterwards.
+- **Edit / delete** — the two icons on the right of a row, admins only.
+- **Log out** — the button in the sidebar, under your name.
+
+---
+
+## Notifications
+
+There's no separate notifications table — the feed is **derived from the issues**
+you can already see, using three rules you control in **Settings**:
+
+| Preference | Notifies you about |
+| --- | --- |
+| New issues reported by others | Issues created by someone else |
+| Issues marked as done | Anything that has reached Done |
+| Open high-priority issues | Anything still open and marked High |
+
+The bell shows how many entries are newer than the last time you marked them
+read. **Mark all as read** stores that timestamp on your profile, so the count
+follows you between devices.
+
+Because the feed is derived rather than event-logged, it reflects the *current*
+state of the board — an issue that was reopened no longer appears under "marked
+as done". A true event log would need its own table.
+
+## Backup and restore
+
+The **Settings** page (admins only) handles day-to-day backup:
+
+- **Export** writes every issue to a JSON file (the one you restore from) plus
+  a CSV for spreadsheets.
+- **Restore** reads that JSON and either **adds** the issues or **replaces**
+  the whole board.
+- Restored issues keep their original reporter in the *Reported by* column, but
+  the row is owned by the admin who imported it — the database requires the
+  inserting user to be the owner.
+
+Backups cover **issues only**, not user accounts (those live in Supabase's
+`auth.users`). For a complete database backup use Supabase →
+**Database → Backups** in the dashboard.
+
+## How the security works
+
+- Each user gets a row in `profiles` holding their **role**, created
+  automatically when they sign up (the role they chose is passed through in
+  the sign-up metadata).
+- `issues` are readable by any signed-in user, but:
+  - inserting stamps the issue with your own user id,
+  - a normal user may only update a row they reported, and a trigger
+    (`guard_issue_update`) refuses any change other than the status,
+  - deleting is admin-only,
+  - changing a **role** is admin-only (`guard_profile_role`).
+- **Deleting a user** is the one thing a browser cannot do directly — it needs
+  the service key, which must never be in a web page. Instead the SQL defines
+  `admin_delete_user()`, a `SECURITY DEFINER` function that checks you are an
+  admin *inside the database* and then removes the auth user. Their issues stay,
+  with the reporter link cleared.
+- Those triggers mean a hand-crafted request from the browser can't do more
+  than the buttons allow.

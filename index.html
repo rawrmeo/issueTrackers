@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Issue Tracking System</title>
+<title>Issue Tracker</title>
 
 <!-- Supabase client (CDN — no install, no build step).
      If it can't load, or the keys below are empty, the app runs in a
@@ -132,6 +132,7 @@
   .field textarea { resize: vertical; min-height: 78px; }
   .field .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row2.single { grid-template-columns: 1fr; }
 
   /* role picker on the register form */
   .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -294,7 +295,7 @@
   .empty p { margin: 0 0 14px; }
 
   /* ============================ users table ============================ */
-  .utable .thead, .utable .row { grid-template-columns: minmax(0,1fr) minmax(0,1.2fr) 120px 150px 90px; }
+  .utable .thead, .utable .row { grid-template-columns: minmax(0,1fr) minmax(0,1.1fr) 128px 104px 74px 84px; }
   .utable select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; font-size: 13px; }
 
   /* ============================ modals ============================ */
@@ -533,7 +534,7 @@
         </svg>
       </div>
       <div>
-        <h1>Issue Tracking System</h1>
+        <h1>Issue Tracker</h1>
         <p>Report, track and resolve issues</p>
       </div>
     </div>
@@ -692,7 +693,7 @@
         </svg>
       </div>
       <div>
-        <h1>Issue Tracking System</h1>
+        <h1>Issue Tracker</h1>
         <p id="modeLabel">Connected</p>
       </div>
     </div>
@@ -886,6 +887,7 @@
           <div>Role</div>
           <div>Joined</div>
           <div style="text-align:right">Reports</div>
+          <div style="text-align:right">Actions</div>
         </div>
         <div id="userList"></div>
       </div>
@@ -1112,8 +1114,8 @@
         <label for="fieldDesc">Description</label>
         <textarea id="fieldDesc" maxlength="2000" placeholder="What happened? Steps to reproduce, expected behaviour, notes…"></textarea>
       </div>
-      <div class="row2">
-        <div class="field">
+      <div class="row2" id="statusRow">
+        <div class="field" id="statusField">
           <label for="fieldStatus">Status</label>
           <select id="fieldStatus">
             <option value="pending">Pending</option>
@@ -1133,6 +1135,38 @@
       <div class="foot">
         <button type="button" class="btn" id="cancelBtn">Cancel</button>
         <button type="submit" class="btn primary" id="saveBtn">Report issue</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==================================================================
+     EDIT USER MODAL (admin only)
+     ================================================================== -->
+<div class="backdrop" id="userBackdrop" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
+  <div class="modal">
+    <h2 id="userModalTitle">Edit user</h2>
+    <form id="userForm" novalidate>
+      <div class="msg error" id="userFormErr"></div>
+      <div class="field">
+        <label for="ufName">Full name</label>
+        <input id="ufName" maxlength="80" placeholder="Their name" />
+      </div>
+      <div class="field">
+        <label for="ufEmail">Email</label>
+        <input id="ufEmail" disabled />
+        <div class="hint">Email can only be changed in the Supabase dashboard.</div>
+      </div>
+      <div class="field">
+        <label for="ufRole">Role</label>
+        <select id="ufRole">
+          <option value="user">Normal user</option>
+          <option value="admin">Administrator</option>
+        </select>
+      </div>
+      <div class="foot">
+        <button type="button" class="btn" id="userCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="userSave">Save changes</button>
       </div>
     </form>
   </div>
@@ -1205,9 +1239,9 @@ create table if not exists public.issues (
   id               uuid primary key default gen_random_uuid(),
   title            text        not null,
   description      text        not null default '',
-  status           text        not null default 'pending',
+  status           text        not null default 'none',
   priority         text        not null default 'medium' check (priority in ('low','medium','high')),
-  created_by       uuid        not null default auth.uid() references auth.users(id) on delete cascade,
+  created_by       uuid        default auth.uid() references auth.users(id) on delete set null,
   created_by_email text        not null default '',
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
@@ -1219,6 +1253,18 @@ create table if not exists public.issues (
 alter table public.issues drop constraint if exists issues_status_check;
 alter table public.issues add constraint issues_status_check
   check (status in ('none','pending','done'));
+
+-- New issues start with no status: a normal user reports it and an
+-- administrator moves it through Pending / Done.
+alter table public.issues alter column status set default 'none';
+
+-- Deleting a user keeps their issues on the board: the reporter link is
+-- cleared instead of the issues being removed. (Older databases used
+-- ON DELETE CASCADE, which would have destroyed them.)
+alter table public.issues alter column created_by drop not null;
+alter table public.issues drop constraint if exists issues_created_by_fkey;
+alter table public.issues add constraint issues_created_by_fkey
+  foreign key (created_by) references auth.users(id) on delete set null;
 
 create index if not exists issues_status_idx     on public.issues (status);
 create index if not exists issues_created_by_idx on public.issues (created_by);
@@ -1323,6 +1369,31 @@ create trigger profiles_guard_role
   before update on public.profiles
   for each row execute function public.guard_profile_role();
 
+-- Admins can delete a user. Deleting the auth.users row also removes the
+-- matching profile, while the user's issues stay on the board.
+create or replace function public.admin_delete_user(target uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Only an administrator can delete users.';
+  end if;
+  if target = auth.uid() then
+    raise exception 'You cannot delete your own account.';
+  end if;
+  -- Detach their issues first, so they survive even on a database that
+  -- still has the older ON DELETE CASCADE constraint.
+  update public.issues set created_by = null where created_by = target;
+  delete from auth.users where id = target;
+end;
+$$;
+
+revoke all on function public.admin_delete_user(uuid) from public;
+grant execute on function public.admin_delete_user(uuid) to authenticated;
+
 -- 4. Row Level Security
 alter table public.profiles enable row level security;
 alter table public.issues   enable row level security;
@@ -1367,8 +1438,8 @@ create policy issues_insert_auth on public.issues
 create policy issues_update_admin on public.issues
   for update using (public.is_admin());
 
-create policy issues_update_own on public.issues
-  for update using (created_by = auth.uid()) with check (created_by = auth.uid());
+-- Normal users cannot update issues at all: they report with the status
+-- "None" and an administrator moves them through Pending / Done.
 
 create policy issues_delete_admin on public.issues
   for delete using (public.is_admin());
@@ -1397,7 +1468,7 @@ create policy issues_delete_admin on public.issues
      ================================================================== */
   var PERMISSIONS = {
     admin: { view: true,  create: true,  edit: true,  remove: true,  setStatus: true,  manageUsers: true  },
-    user:  { view: true,  create: true,  edit: false, remove: false, setStatus: true,  manageUsers: false }
+    user:  { view: true,  create: true,  edit: false, remove: false, setStatus: false, manageUsers: false }
   };
 
   var currentUser = null;   // { id, email, name, role }
@@ -1416,25 +1487,16 @@ create policy issues_delete_admin on public.issues
 
   function statusLabel(s) { return STATUS_LABELS[s] || s; }
 
-  /* Should a normal user be able to set the status of ANY issue, or only
-     the ones they reported?
-     Set to true to allow any issue — but you must ALSO relax the database
-     policy `issues_update_own` in supabase-schema.sql (change
-     `created_by = auth.uid()` to `auth.uid() is not null`), otherwise the
-     update is rejected by Row Level Security. */
-  var USERS_CAN_SET_ANY_STATUS = false;
-
   /* Did the signed-in user report this issue? */
   function isMine(it) {
     if (!currentUser || !it) return false;
     return it.createdByEmail === currentUser.email || it.createdBy === currentUser.id;
   }
 
-  /* Admins may set the status of anything; a normal user only their own. */
+  /* Only administrators move an issue through Pending / Done. A normal user
+     reports it (it starts as "None") and that is all they can do. */
   function mayChangeStatus(it) {
-    if (!can("setStatus")) return false;
-    if (isAdmin() || USERS_CAN_SET_ANY_STATUS) return true;
-    return isMine(it);
+    return can("setStatus");
   }
 
   /* ==================================================================
@@ -1497,6 +1559,7 @@ create policy issues_delete_admin on public.issues
     if (/relation .* does not exist|schema cache/i.test(m)) return "Database tables are missing. Run supabase-schema.sql first (see Connect Supabase).";
     if (/issues_status_check|violates check constraint/i.test(m)) return "Your database doesn't accept the \"None\" status yet. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
     if (/column .* does not exist/i.test(m)) return "Your database is missing some newer profile columns. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
+    if (/Could not find the function|PGRST202/i.test(m)) return "This needs a newer database function. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
     return m || "Something went wrong. Please try again.";
   }
 
@@ -1750,6 +1813,26 @@ create policy issues_delete_admin on public.issues
         });
       },
 
+      updateUser: function (id, patch) {
+        return ready.then(function () {
+          var all = users();
+          if (!all[id]) return Promise.reject(new Error("User not found."));
+          if (patch.name !== undefined) all[id].name = patch.name;
+          if (patch.role !== undefined) all[id].role = patch.role;
+          write(K_USERS, all);
+        });
+      },
+
+      /* Their issues are kept, matching the cloud behaviour. */
+      deleteUser: function (id) {
+        return ready.then(function () {
+          var all = users();
+          if (!all[id]) return Promise.reject(new Error("User not found."));
+          delete all[id];
+          write(K_USERS, all);
+        });
+      },
+
       updateProfile: function (patch) {
         return ready.then(function () {
           var all = users();
@@ -1952,6 +2035,24 @@ create policy issues_delete_admin on public.issues
 
     setUserRole: function (id, role) {
       return sb.from("profiles").update({ role: role }).eq("id", id).then(function (res) {
+        if (res.error) throw res.error;
+      });
+    },
+
+    updateUser: function (id, patch) {
+      var row = {};
+      if (patch.name !== undefined) row.full_name = patch.name;
+      if (patch.role !== undefined) row.role = patch.role;
+      return sb.from("profiles").update(row).eq("id", id).then(function (res) {
+        if (res.error) throw res.error;
+      });
+    },
+
+    /* This calls a database function that deletes the auth user. A browser
+       cannot do that directly, which is why the SQL defines it. The admin
+       check lives inside the function, so the anon key stays safe. */
+    deleteUser: function (id) {
+      return sb.rpc("admin_delete_user", { target: id }).then(function (res) {
         if (res.error) throw res.error;
       });
     },
@@ -2190,9 +2291,7 @@ create policy issues_delete_admin on public.issues
   /* A status dropdown when the user may change it, otherwise a locked badge. */
   function statusControl(it) {
     if (!mayChangeStatus(it)) {
-      var why = can("setStatus")
-        ? "You can only change the status of issues you reported."
-        : "You cannot change the status.";
+      var why = "Only an administrator can change the status. New issues start as None.";
       return '<span class="pill ' + esc(it.status) + ' status-locked" title="' + esc(why) + '">' +
         esc(statusLabel(it.status)) + '</span>';
     }
@@ -2327,7 +2426,7 @@ create policy issues_delete_admin on public.issues
     if (next === it.status) return;
 
     if (!mayChangeStatus(it)) {
-      toast("You can only change the status of issues you reported.");
+      toast("Only an administrator can change the status.");
       render();
       return;
     }
@@ -2364,19 +2463,26 @@ create policy issues_delete_admin on public.issues
     el("saveBtn").textContent = issue ? "Save changes" : "Report issue";
     fTitle.value = issue ? issue.title : "";
     fDesc.value = issue ? (issue.description || "") : "";
-    fStatus.value = issue ? issue.status : "pending";
+
+    // Only an administrator can choose a status. A normal user's report
+    // starts as "None" and an admin moves it on from there.
+    var canPickStatus = can("setStatus");
+    fStatus.value = issue ? issue.status : "none";
     fPriority.value = issue ? issue.priority : "medium";
 
-    // A normal user may only change the status, so lock the detail fields.
     var lockDetails = Boolean(issue) && !can("edit");
     [fTitle, fDesc, fPriority].forEach(function (f) { f.disabled = lockDetails; });
-    fStatus.disabled = !can("setStatus");
-    el("modalTitle").textContent = lockDetails ? "Update status" : el("modalTitle").textContent;
+
+    // Hide the status control from anyone who cannot use it.
+    el("statusField").hidden = !canPickStatus;
+    el("statusRow").classList.toggle("single", !canPickStatus);
 
     showMsg(formErr, "");
     backdrop.classList.add("open");
     document.body.style.overflow = "hidden";
-    setTimeout(function () { (lockDetails ? fStatus : fTitle).focus(); }, 30);
+    setTimeout(function () {
+      if (lockDetails && canPickStatus) fStatus.focus(); else fTitle.focus();
+    }, 30);
   }
 
   function closeModal() {
@@ -2393,6 +2499,7 @@ create policy issues_delete_admin on public.issues
     if (e.key !== "Escape") return;
     if (backdrop.classList.contains("open")) closeModal();
     if (el("setupView").classList.contains("open")) el("setupView").classList.remove("open");
+    if (el("userBackdrop").classList.contains("open")) closeUserModal();
     closeMenu();
   });
 
@@ -2409,7 +2516,13 @@ create policy issues_delete_admin on public.issues
 
     var payload = lockDetails
       ? { status: fStatus.value }
-      : { title: title, description: fDesc.value.trim(), status: fStatus.value, priority: fPriority.value };
+      : {
+          title: title,
+          description: fDesc.value.trim(),
+          // A normal user's report always starts as None.
+          status: can("setStatus") ? fStatus.value : "none",
+          priority: fPriority.value
+        };
 
     var btn = el("saveBtn");
     busy(btn, true, "Saving…");
@@ -2466,7 +2579,18 @@ create policy issues_delete_admin on public.issues
           '</select>' +
         '</div>' +
         '<div class="when">' + (u.createdAt ? timeAgo(u.createdAt) : "—") + '</div>' +
-        '<div class="col-actions"><span class="when">' + reports + '</span></div>' +
+        '<div style="text-align:right" class="when">' + reports + '</div>' +
+        '<div class="col-actions">' +
+          '<button class="btn ghost icon" data-user-action="edit" title="Edit user" aria-label="Edit user">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
+          '</button>' +
+          (isMe ? "" :
+            '<button class="btn ghost icon danger" data-user-action="delete" title="Delete user" aria-label="Delete user">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+              '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>' +
+            '</button>') +
+        '</div>' +
       '</div>';
     }).join("");
   }
@@ -2498,6 +2622,112 @@ create policy issues_delete_admin on public.issues
       refreshUsers();
     });
   });
+
+  /* ---------- edit a user ---------- */
+  var userBackdrop = el("userBackdrop");
+  var editingUserId = null;
+
+  function findUser(id) {
+    for (var i = 0; i < users.length; i++) if (users[i].id === id) return users[i];
+    return null;
+  }
+
+  function openUserModal(u) {
+    editingUserId = u.id;
+    var self = currentUser && u.id === currentUser.id;
+
+    el("ufName").value = u.name || "";
+    el("ufEmail").value = u.email;
+    el("ufRole").value = u.role;
+    el("ufRole").disabled = Boolean(self);
+    el("ufName").disabled = false;
+
+    showMsg(el("userFormErr"), "");
+    userBackdrop.classList.add("open");
+    document.body.style.overflow = "hidden";
+    setTimeout(function () { el("ufName").focus(); }, 30);
+  }
+
+  function closeUserModal() {
+    userBackdrop.classList.remove("open");
+    document.body.style.overflow = "";
+    editingUserId = null;
+  }
+
+  el("userCancel").addEventListener("click", closeUserModal);
+  userBackdrop.addEventListener("mousedown", function (e) {
+    if (e.target === userBackdrop) closeUserModal();
+  });
+
+  userListEl.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-user-action]");
+    if (!btn) return;
+    var rowEl = e.target.closest(".row");
+    if (!rowEl) return;
+    var u = findUser(rowEl.dataset.uid);
+    if (!u) return;
+
+    if (btn.dataset.userAction === "edit") {
+      if (!isAdmin()) return;
+      openUserModal(u);
+    } else if (btn.dataset.userAction === "delete") {
+      if (!isAdmin()) return;
+      deleteUser(u);
+    }
+  });
+
+  el("userForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!isAdmin() || !editingUserId) return;
+
+    var self = currentUser && editingUserId === currentUser.id;
+    var patch = { name: el("ufName").value.trim() };
+    if (!self) patch.role = el("ufRole").value;
+
+    var btn = el("userSave");
+    busy(btn, true, "Saving…");
+    api.updateUser(editingUserId, patch).then(function () {
+      busy(btn, false);
+      if (self) {
+        currentUser.name = patch.name;
+        renderIdentity();
+      }
+      closeUserModal();
+      toast("User updated");
+      return refreshUsers();
+    }).catch(function (ex) {
+      busy(btn, false);
+      showMsg(el("userFormErr"), friendly(ex.message));
+    });
+  });
+
+  /* ---------- delete a user ---------- */
+  function deleteUser(u) {
+    if (!isAdmin()) return;
+    if (currentUser && u.id === currentUser.id) {
+      toast("You cannot delete your own account.");
+      return;
+    }
+
+    var reports = issues.filter(function (it) {
+      return it.createdByEmail === u.email || it.createdBy === u.id;
+    }).length;
+
+    var msg = 'Delete "' + (u.name || u.email) + '"?\n\n' +
+      "They are removed and can no longer sign in." +
+      (reports ? "\n\nTheir " + reports + " issue(s) stay on the board." : "");
+    if (!confirm(msg)) return;
+    if (prompt("Type DELETE to confirm:") !== "DELETE") { toast("Cancelled"); return; }
+
+    api.deleteUser(u.id).then(function () {
+      toast("User deleted");
+      return refreshUsers();
+    }).then(function () {
+      return refresh();
+    }).catch(function (ex) {
+      toast("Error: " + friendly(ex.message));
+    });
+  }
 
   /* ==================================================================
      SETTINGS (admin) — backup, restore and maintenance
