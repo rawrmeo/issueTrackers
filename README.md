@@ -12,6 +12,13 @@ cannot do, and the database (Row Level Security + triggers) rejects it anyway.
 
 ---
 
+## Live deployment
+
+- **Production:** <https://issue-trackers-bay.vercel.app> — auto-deploys from the `main` branch.
+- **Preview:** other branches (for example `dev`) get their own preview URL from Vercel.
+
+---
+
 ## What's in this folder
 
 | File | What it is |
