@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Issue Tracker</title>
+
+<!-- Supabase client (CDN — no install, no build step).
+     If it can't load, or the keys below are empty, the app runs in a
+     local demo mode so you can still try every feature. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root {
+    --bg: #f4f5f8;
+    --surface: #ffffff;
+    --surface-2: #f0f1f4;
+    --border: #e3e5ea;
+    --text: #171a20;
+    --muted: #6b7280;
+    --accent: #4f46e5;
+    --accent-soft: #eef0ff;
+    --done: #15803d;
+    --done-soft: #e7f6ed;
+    --pending: #b45309;
+    --pending-soft: #fdf3e3;
+    --high: #dc2626;
+    --high-soft: #fdeaea;
+    --medium: #b45309;
+    --low: #0e7490;
+    --danger: #dc2626;
+    --shadow: 0 1px 2px rgba(16,20,30,.05), 0 8px 24px rgba(16,20,30,.07);
+    --radius: 12px;
+    --sidebar: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1016;
+      --surface: #171a22;
+      --surface-2: #1e222c;
+      --border: #2a2f3b;
+      --text: #e8eaf0;
+      --muted: #9aa2b1;
+      --accent: #8b8cf7;
+      --accent-soft: #232544;
+      --done: #4ade80;
+      --done-soft: #14301f;
+      --pending: #fbbf24;
+      --pending-soft: #33260f;
+      --high: #f87171;
+      --high-soft: #35191b;
+      --medium: #fbbf24;
+      --low: #22d3ee;
+      --danger: #f87171;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.35);
+      --sidebar: #12151c;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: var(--accent); }
+  [hidden] { display: none !important; }
+  h1, h2, h3 { letter-spacing: -.2px; }
+
+  /* ============================ buttons ============================ */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    border: 1px solid var(--border); background: var(--surface);
+    padding: 8px 13px; border-radius: 9px; font-size: 14px; font-weight: 550;
+    white-space: nowrap; transition: background .15s, border-color .15s, opacity .15s;
+  }
+  .btn:hover:not(:disabled) { background: var(--surface-2); }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; }
+  .btn.ghost:hover:not(:disabled) { background: var(--surface-2); }
+  .btn.danger { color: var(--danger); }
+  .btn.danger:hover:not(:disabled) { background: var(--high-soft); }
+  .btn.icon { padding: 7px; }
+  .btn svg { width: 16px; height: 16px; flex: none; }
+  .btn.block { width: 100%; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 999px; border: 1px solid transparent;
+  }
+  .badge.admin { background: var(--accent-soft); color: var(--accent); }
+  .badge.user  { background: var(--surface-2); color: var(--muted); }
+  .badge.you   { background: var(--done-soft); color: var(--done); }
+
+  /* ============================ auth ============================ */
+  .auth-wrap { min-height: 100%; display: grid; place-items: center; padding: 28px 18px; }
+  .auth-card {
+    width: 100%; max-width: 430px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 16px; padding: 26px; box-shadow: var(--shadow);
+  }
+  .brand-row { display: flex; align-items: center; gap: 11px; margin-bottom: 22px; }
+  .logo {
+    width: 36px; height: 36px; border-radius: 10px; flex: none;
+    background: var(--accent); color: #fff; display: grid; place-items: center;
+  }
+  .logo svg { width: 19px; height: 19px; }
+  .brand-row h1 { font-size: 16px; margin: 0; }
+  .brand-row p { margin: 0; font-size: 12px; color: var(--muted); }
+  .auth-card h2 { font-size: 17px; margin: 0 0 5px; }
+  .auth-card .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; }
+  .auth-foot { margin-top: 16px; font-size: 13.5px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .auth-foot.single { justify-content: flex-start; }
+  .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font-size: 13.5px; font-weight: 550; }
+  .linkbtn:hover { text-decoration: underline; }
+
+  /* ============================ fields ============================ */
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+  .field input, .field textarea, .field select {
+    width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 9px 11px; transition: border-color .15s;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent;
+  }
+  .field textarea { resize: vertical; min-height: 78px; }
+  .field .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* role picker on the register form */
+  .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .role-opt { position: relative; }
+  .role-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .role-opt label {
+    display: block; cursor: pointer; height: 100%;
+    border: 1.5px solid var(--border); border-radius: 11px; padding: 11px 12px;
+    background: var(--surface-2); transition: border-color .15s, background .15s;
+  }
+  .role-opt label:hover { border-color: var(--accent); }
+  .role-opt input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .role-opt input:checked + label { border-color: var(--accent); background: var(--accent-soft); }
+  .role-opt .t { font-size: 13.5px; font-weight: 650; display: block; }
+  .role-opt .d { font-size: 11.5px; color: var(--muted); display: block; margin-top: 3px; line-height: 1.4; }
+
+  .msg { font-size: 13px; margin: 0 0 12px; display: none; border-radius: 9px; padding: 9px 12px; }
+  .msg.show { display: block; }
+  .msg.error { color: var(--danger); background: var(--high-soft); }
+  .msg.ok    { color: var(--done);   background: var(--done-soft); }
+  .msg.info  { color: var(--muted);  background: var(--surface-2); }
+
+  .banner {
+    background: var(--pending-soft); color: var(--pending);
+    border: 1px solid color-mix(in srgb, var(--pending) 35%, transparent);
+    border-radius: 10px; padding: 10px 13px; font-size: 12.5px;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .banner b { font-weight: 700; }
+  .banner .btn { margin-left: auto; }
+
+  /* ============================ app shell ============================ */
+  .shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100vh; }
+
+  .sidebar {
+    background: var(--sidebar); border-right: 1px solid var(--border);
+    padding: 18px 14px; display: flex; flex-direction: column; gap: 6px;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .sidebar .brand-row { margin-bottom: 18px; padding: 0 4px; }
+  .nav-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); padding: 12px 8px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    border: 0; background: transparent; color: var(--muted);
+    padding: 9px 10px; border-radius: 9px; font-size: 14px; font-weight: 550;
+  }
+  .nav-item svg { width: 17px; height: 17px; flex: none; }
+  .nav-item:hover { background: var(--surface-2); color: var(--text); }
+  .nav-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+  .nav-item .count {
+    margin-left: auto; font-size: 11.5px; font-weight: 700; color: var(--muted);
+    background: var(--surface-2); border-radius: 999px; padding: 1px 7px;
+  }
+  .nav-item[aria-current="page"] .count { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+
+  .sidebar .spacer { flex: 1; }
+  .user-card {
+    border: 1px solid var(--border); border-radius: 11px; padding: 11px;
+    display: flex; flex-direction: column; gap: 8px; background: var(--surface-2);
+  }
+  .user-card .name { font-size: 13.5px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-card .email { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-card .foot { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+  .user-card .btn { padding: 6px 10px; font-size: 12.5px; }
+
+  .main { padding: 26px 28px 70px; min-width: 0; }
+  .page-head { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+  .page-head .titles { margin-right: auto; }
+  .page-head h2 { margin: 0; font-size: 21px; }
+  .page-head p { margin: 3px 0 0; color: var(--muted); font-size: 13.5px; }
+
+  /* ============================ stats ============================ */
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .stat .n { font-size: 25px; font-weight: 750; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+  .stat.pending .n { color: var(--pending); }
+  .stat.done .n    { color: var(--done); }
+  .stat.high .n    { color: var(--high); }
+
+  /* ============================ toolbar ============================ */
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 3px; background: var(--surface-2); padding: 3px; border-radius: 10px; }
+  .tab {
+    border: 0; background: transparent; color: var(--muted);
+    padding: 7px 13px; border-radius: 8px; font-size: 13.5px; font-weight: 550;
+  }
+  .tab[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.09); }
+  .tab .count { opacity: .65; margin-left: 2px; font-variant-numeric: tabular-nums; }
+  .search { position: relative; flex: 1; min-width: 200px; }
+  .search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); }
+  .search input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 9px; padding: 9px 12px 9px 34px;
+  }
+  .search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+  .toolbar select {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px;
+  }
+
+  /* ============================ issues table ============================ */
+  .table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .thead, .row {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1fr) 96px minmax(0, 165px) 92px 84px;
+    gap: 14px; align-items: center; padding: 12px 16px;
+  }
+  .thead {
+    font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--border);
+  }
+  .row { border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .row:hover { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+  .row.is-done .issue-title { color: var(--muted); text-decoration: line-through; }
+  .issue-title { font-weight: 600; word-break: break-word; }
+  .issue-desc { color: var(--muted); font-size: 12.5px; margin-top: 2px; word-break: break-word;
+                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .reporter { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .reporter .owner { color: var(--text); font-weight: 550; display: block; overflow: hidden; text-overflow: ellipsis; }
+  .when { font-size: 12px; color: var(--muted); }
+  .col-actions { display: flex; gap: 3px; justify-content: flex-end; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 650; padding: 4px 9px; border-radius: 999px;
+    border: 1px solid transparent; text-transform: capitalize;
+  }
+  .pill.pending { background: var(--pending-soft); color: var(--pending); }
+  .pill.done    { background: var(--done-soft);    color: var(--done); }
+  .pill.high    { color: var(--high);   border-color: color-mix(in srgb, var(--high) 45%, transparent); }
+  .pill.medium  { color: var(--medium); border-color: color-mix(in srgb, var(--medium) 45%, transparent); }
+  .pill.low     { color: var(--low);    border-color: color-mix(in srgb, var(--low) 45%, transparent); }
+
+  .status-btn { border: 0; background: none; padding: 0; }
+  .status-btn:disabled { cursor: default; opacity: 1; }
+  .status-btn:not(:disabled):hover .pill { filter: brightness(.96); box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 22%, transparent); }
+
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); background: var(--surface);
+           border: 1px dashed var(--border); border-radius: var(--radius); }
+  .empty svg { width: 38px; height: 38px; opacity: .4; margin-bottom: 10px; }
+  .empty p { margin: 0 0 14px; }
+
+  /* ============================ users table ============================ */
+  .utable .thead, .utable .row { grid-template-columns: minmax(0,1fr) minmax(0,1.2fr) 120px 150px 90px; }
+  .utable select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; font-size: 13px; }
+
+  /* ============================ modals ============================ */
+  .backdrop {
+    position: fixed; inset: 0; background: rgba(9,11,16,.55); backdrop-filter: blur(2px);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 40px 16px; z-index: 50; overflow-y: auto;
+  }
+  .backdrop.open { display: flex; animation: fade .15s ease; }
+  @keyframes fade { from { opacity: 0; } }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    width: 100%; max-width: 540px; padding: 22px; box-shadow: var(--shadow);
+    animation: pop .16s ease;
+  }
+  .modal.wide { max-width: 760px; }
+  @keyframes pop { from { transform: translateY(-8px) scale(.985); opacity: 0; } }
+  .modal h2 { margin: 0 0 16px; font-size: 17px; }
+  .modal .foot { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+
+  .toasts { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast {
+    background: var(--text); color: var(--bg); padding: 9px 16px; border-radius: 999px;
+    font-size: 13.5px; font-weight: 550; box-shadow: var(--shadow); animation: pop .18s ease; max-width: 92vw;
+  }
+  .toast.out { opacity: 0; transition: opacity .3s; }
+
+  pre.sql {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; overflow: auto; max-height: 320px;
+    font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: pre; margin: 0 0 12px;
+  }
+  .steps-list { margin: 0 0 14px; padding-left: 20px; font-size: 13.5px; color: var(--muted); }
+  .steps-list li { margin-bottom: 6px; }
+  .steps-list code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+
+  /* ============================ responsive ============================ */
+  @media (max-width: 900px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 760px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar {
+      position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border);
+      flex-direction: column;
+    }
+    .sidebar .nav-label { display: none; }
+    .sidebar nav { display: flex; flex-wrap: wrap; gap: 6px; }
+    .nav-item { width: auto; }
+    .main { padding: 20px 16px 60px; }
+    /* table becomes stacked cards */
+    .thead { display: none; }
+    .row { grid-template-columns: 1fr; gap: 8px; padding: 14px 16px; position: relative; }
+    .row > .col-status { order: -1; }
+    .col-actions { justify-content: flex-start; }
+    .reporter { white-space: normal; }
+  }
+  @media (max-width: 520px) {
+    .row2, .roles { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================================================================
+     AUTH SCREENS  (sign in / register / forgot password)
+     ================================================================== -->
+<div id="authView" class="auth-wrap" hidden>
+  <div class="auth-card">
+    <div class="brand-row">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+      </div>
+      <div>
+        <h1>Issue Tracker</h1>
+        <p>Report, track and resolve issues</p>
+      </div>
+    </div>
+
+    <!-- sign in -->
+    <section id="pane-login">
+      <h2>Sign in</h2>
+      <p class="sub">Welcome back. Use your email and password.</p>
+      <div class="msg error" id="loginErr"></div>
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com" required />
+        </div>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Your password" required />
+        </div>
+        <button class="btn primary block" type="submit" id="loginBtn">Sign in</button>
+      </form>
+      <div class="auth-foot">
+        <button class="linkbtn" type="button" id="toForgot">Forgot password?</button>
+        <button class="linkbtn" type="button" id="toRegister">Create an account</button>
+      </div>
+      <div class="msg info" id="demoHint" hidden></div>
+    </section>
+
+    <!-- register -->
+    <section id="pane-register" hidden>
+      <h2>Create an account</h2>
+      <p class="sub">Choose the role you need. It decides what you can do.</p>
+      <div class="msg error" id="regErr"></div>
+      <form id="registerForm" novalidate>
+        <div class="field">
+          <label for="regName">Full name</label>
+          <input id="regName" type="text" autocomplete="name" placeholder="Jane Doe" maxlength="80" />
+        </div>
+        <div class="field">
+          <label>Role</label>
+          <div class="roles">
+            <div class="role-opt">
+              <input type="radio" name="regRole" id="roleUser" value="user" checked />
+              <label for="roleUser">
+                <span class="t">Normal user</span>
+                <span class="d">Report issues and update their status.</span>
+              </label>
+            </div>
+            <div class="role-opt">
+              <input type="radio" name="regRole" id="roleAdmin" value="admin" />
+              <label for="roleAdmin">
+                <span class="t">Administrator</span>
+                <span class="d">Full control: edit, delete and manage users.</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="regEmail">Email</label>
+          <input id="regEmail" type="email" autocomplete="email" placeholder="you@example.com" required />
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="regPassword">Password</label>
+            <input id="regPassword" type="password" autocomplete="new-password" placeholder="6+ characters" required />
+          </div>
+          <div class="field">
+            <label for="regConfirm">Confirm password</label>
+            <input id="regConfirm" type="password" autocomplete="new-password" placeholder="Repeat it" required />
+          </div>
+        </div>
+        <button class="btn primary block" type="submit" id="regBtn">Create account</button>
+      </form>
+      <div class="auth-foot single">
+        <button class="linkbtn" type="button" id="toLoginFromReg">&larr; Back to sign in</button>
+      </div>
+    </section>
+
+    <!-- forgot password -->
+    <section id="pane-forgot" hidden>
+      <h2>Reset your password</h2>
+      <p class="sub">We'll email you a link to choose a new password.</p>
+      <div class="msg error" id="forgotErr"></div>
+      <form id="forgotForm" novalidate>
+        <div class="field">
+          <label for="forgotEmail">Email</label>
+          <input id="forgotEmail" type="email" autocomplete="email" placeholder="you@example.com" required />
+        </div>
+        <button class="btn primary block" type="submit" id="forgotBtn">Send reset link</button>
+      </form>
+      <div class="auth-foot single">
+        <button class="linkbtn" type="button" id="toLoginFromForgot">&larr; Back to sign in</button>
+      </div>
+    </section>
+
+    <!-- confirmation message -->
+    <section id="pane-sent" hidden>
+      <h2 id="sentTitle">Check your email</h2>
+      <p class="sub" id="sentBody"></p>
+      <div class="msg ok show" id="sentNote"></div>
+      <div id="sentDemoWrap" hidden>
+        <button class="btn primary block" type="button" id="sentDemoBtn">Continue: set a new password</button>
+      </div>
+      <div class="auth-foot single">
+        <button class="linkbtn" type="button" id="sentBack">&larr; Back to sign in</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ==================================================================
+     SET NEW PASSWORD SCREEN (opened from a reset link)
+     ================================================================== -->
+<div id="resetView" class="auth-wrap" hidden>
+  <div class="auth-card">
+    <div class="brand-row">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2z" />
+          <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+        </svg>
+      </div>
+      <div>
+        <h1>Set a new password</h1>
+        <p>You followed a reset link</p>
+      </div>
+    </div>
+    <div class="msg error" id="resetErr"></div>
+    <form id="resetForm" novalidate>
+      <div class="field">
+        <label for="resetPassword">New password</label>
+        <input id="resetPassword" type="password" autocomplete="new-password" placeholder="6+ characters" required />
+      </div>
+      <div class="field">
+        <label for="resetConfirm">Confirm new password</label>
+        <input id="resetConfirm" type="password" autocomplete="new-password" placeholder="Repeat it" required />
+      </div>
+      <button class="btn primary block" type="submit" id="resetBtn">Save new password</button>
+    </form>
+    <div class="auth-foot single">
+      <button class="linkbtn" type="button" id="resetCancel">&larr; Back to sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================================
+     THE APP
+     ================================================================== -->
+<div id="appView" class="shell" hidden>
+
+  <!-- ---------------- sidebar ---------------- -->
+  <aside class="sidebar">
+    <div class="brand-row">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+      </div>
+      <div>
+        <h1>Issue Tracker</h1>
+        <p id="modeLabel">Connected</p>
+      </div>
+    </div>
+
+    <nav aria-label="Main">
+      <div class="nav-label">Workspace</div>
+      <button class="nav-item" data-view="board" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/>
+          <rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>
+        </svg>
+        <span>Dashboard</span><span class="count" id="navCountAll">0</span>
+      </button>
+      <button class="nav-item" data-view="mine">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>My reports</span><span class="count" id="navCountMine">0</span>
+      </button>
+
+      <div class="nav-label" id="adminLabel" hidden>Administration</div>
+      <button class="nav-item" data-view="users" id="navUsers" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>Users</span><span class="count" id="navCountUsers">0</span>
+      </button>
+    </nav>
+
+    <div class="spacer"></div>
+
+    <div class="user-card">
+      <div>
+        <div class="name" id="userName">—</div>
+        <div class="email" id="userEmail">—</div>
+      </div>
+      <div class="foot">
+        <span class="badge" id="userRole">user</span>
+        <button class="btn ghost" id="signOutBtn" title="Log out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>
+          </svg>
+          Log out
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ---------------- main ---------------- -->
+  <main class="main">
+    <div class="banner" id="demoBanner" hidden style="margin-bottom:18px;">
+      <span><b>Demo mode.</b> Supabase isn't configured yet, so everything is stored in this browser only.</span>
+      <button class="btn" id="setupFromBanner">Connect Supabase</button>
+    </div>
+
+    <div class="page-head">
+      <div class="titles">
+        <h2 id="pageTitle">Dashboard</h2>
+        <p id="pageSub">All issues reported in the system.</p>
+      </div>
+      <button class="btn primary" id="newBtn" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        Report issue
+      </button>
+    </div>
+
+    <!-- issues area -->
+    <div id="issuesArea">
+      <section class="stats" aria-label="Summary">
+        <div class="stat"><div class="n" id="statTotal">0</div><div class="l">Total</div></div>
+        <div class="stat pending"><div class="n" id="statPending">0</div><div class="l">Pending</div></div>
+        <div class="stat done"><div class="n" id="statDone">0</div><div class="l">Done</div></div>
+        <div class="stat high"><div class="n" id="statHigh">0</div><div class="l">High priority</div></div>
+      </section>
+
+      <section class="toolbar">
+        <div class="tabs" role="tablist" aria-label="Filter by status">
+          <button class="tab" role="tab" data-filter="all">All <span class="count" id="cAll">0</span></button>
+          <button class="tab" role="tab" data-filter="pending">Pending <span class="count" id="cPending">0</span></button>
+          <button class="tab" role="tab" data-filter="done">Done <span class="count" id="cDone">0</span></button>
+        </div>
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+          <input type="search" id="search" placeholder="Search by title, description or reporter…" aria-label="Search issues" />
+        </div>
+        <select id="priorityFilter" aria-label="Filter by priority">
+          <option value="all">All priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </section>
+
+      <div class="table">
+        <div class="thead">
+          <div>Status</div>
+          <div>Issue</div>
+          <div>Priority</div>
+          <div>Reported by</div>
+          <div>Updated</div>
+          <div style="text-align:right">Actions</div>
+        </div>
+        <div id="list"></div>
+      </div>
+    </div>
+
+    <!-- users area (admin only) -->
+    <div id="usersArea" hidden>
+      <div class="toolbar">
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+          <input type="search" id="userSearch" placeholder="Search users by name or email…" aria-label="Search users" />
+        </div>
+      </div>
+      <div class="table utable">
+        <div class="thead">
+          <div>Name</div>
+          <div>Email</div>
+          <div>Role</div>
+          <div>Joined</div>
+          <div style="text-align:right">Reports</div>
+        </div>
+        <div id="userList"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ==================================================================
+     CREATE / EDIT ISSUE MODAL
+     ================================================================== -->
+<div class="backdrop" id="backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <h2 id="modalTitle">Report an issue</h2>
+    <form id="issueForm" novalidate>
+      <div class="msg error" id="formErr"></div>
+      <div class="field">
+        <label for="fieldTitle">Title</label>
+        <input id="fieldTitle" maxlength="140" placeholder="Short summary of the issue" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="fieldDesc">Description</label>
+        <textarea id="fieldDesc" maxlength="2000" placeholder="What happened? Steps to reproduce, expected behaviour, notes…"></textarea>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="fieldStatus">Status</label>
+          <select id="fieldStatus">
+            <option value="pending">Pending</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fieldPriority">Priority</label>
+          <select id="fieldPriority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
+      <div class="foot">
+        <button type="button" class="btn" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn primary" id="saveBtn">Report issue</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==================================================================
+     SETUP / CONNECT SUPABASE MODAL
+     ================================================================== -->
+<div class="backdrop" id="setupView" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+  <div class="modal wide">
+    <h2 id="setupTitle">Connect a Supabase database</h2>
+    <p class="sub" style="margin-top:-8px;color:var(--muted);font-size:13.5px;">
+      Right now the app stores data in this browser only. Follow these steps to use a real
+      database where every user shares the same issues.
+    </p>
+
+    <ol class="steps-list">
+      <li>Create a free project at <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a>.</li>
+      <li>Open <b>SQL Editor &rarr; New query</b>, paste the SQL below and press <b>Run</b>.</li>
+      <li>Open <b>Project Settings &rarr; API</b> and copy the <b>Project URL</b> and <b>anon public</b> key.</li>
+      <li>Paste them into the two variables at the top of this file's <code>&lt;script&gt;</code> block:
+        <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code>.</li>
+      <li>Reload the page and register. The anon key is safe to expose — Row Level Security protects the data.</li>
+    </ol>
+
+    <pre class="sql" id="sqlBox"></pre>
+
+    <div class="foot">
+      <button class="btn" id="copySqlBtn">Copy SQL</button>
+      <button class="btn primary" id="setupClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================================
+     DATABASE SCHEMA (shown in the setup panel above)
+     ------------------------------------------------------------------
+     This is the same SQL as supabase-schema.sql. If you edit one,
+     edit the other, so the file in the repo and the SQL the app hands
+     you never drift apart. It is safe to run more than once.
+     ================================================================== -->
+<script type="text/plain" id="schemaSql">
+-- =====================================================================
+--  ISSUE TRACKER — SUPABASE DATABASE SCHEMA
+--  Paste into Supabase:  SQL Editor -> New query -> Run.
+--  Safe to run more than once.
+-- =====================================================================
+
+create extension if not exists "pgcrypto";
+
+-- 1. Profiles — one row per user, stores the role
+create table if not exists public.profiles (
+  id         uuid primary key references auth.users(id) on delete cascade,
+  email      text        not null,
+  full_name  text        not null default '',
+  role       text        not null default 'user' check (role in ('admin','user')),
+  created_at timestamptz not null default now()
+);
+
+-- 2. Issues — the tracker records
+create table if not exists public.issues (
+  id               uuid primary key default gen_random_uuid(),
+  title            text        not null,
+  description      text        not null default '',
+  status           text        not null default 'pending' check (status in ('pending','done')),
+  priority         text        not null default 'medium' check (priority in ('low','medium','high')),
+  created_by       uuid        not null default auth.uid() references auth.users(id) on delete cascade,
+  created_by_email text        not null default '',
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+
+create index if not exists issues_status_idx     on public.issues (status);
+create index if not exists issues_created_by_idx on public.issues (created_by);
+create index if not exists issues_updated_at_idx on public.issues (updated_at desc);
+
+-- 3. Helpers + auto-create a profile on sign up
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = 'admin'
+  );
+$$;
+
+create or replace function public.touch_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create or replace function public.guard_issue_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if public.is_admin() then
+    return new;
+  end if;
+  if new.title         is distinct from old.title
+     or new.description is distinct from old.description
+     or new.priority    is distinct from old.priority
+     or new.created_by  is distinct from old.created_by then
+    raise exception 'Only an administrator can edit issue details.';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, email, full_name, role)
+  values (
+    new.id,
+    coalesce(new.email, ''),
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    case when new.raw_user_meta_data->>'role' = 'admin' then 'admin' else 'user' end
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists issues_touch_updated_at on public.issues;
+create trigger issues_touch_updated_at
+  before update on public.issues
+  for each row execute function public.touch_updated_at();
+
+drop trigger if exists issues_guard_update on public.issues;
+create trigger issues_guard_update
+  before update on public.issues
+  for each row execute function public.guard_issue_update();
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- 3b. Only administrators may change a role. This stops a user from
+--     promoting themselves through the profiles_update_self policy.
+create or replace function public.guard_profile_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role is distinct from old.role and not public.is_admin() then
+    raise exception 'Only an administrator can change roles.';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_guard_role on public.profiles;
+create trigger profiles_guard_role
+  before update on public.profiles
+  for each row execute function public.guard_profile_role();
+
+-- 4. Row Level Security
+alter table public.profiles enable row level security;
+alter table public.issues   enable row level security;
+
+drop policy if exists profiles_select_self   on public.profiles;
+drop policy if exists profiles_select_admin  on public.profiles;
+drop policy if exists profiles_insert_self   on public.profiles;
+drop policy if exists profiles_update_self   on public.profiles;
+drop policy if exists profiles_update_admin  on public.profiles;
+drop policy if exists profiles_delete_admin  on public.profiles;
+
+create policy profiles_select_self on public.profiles
+  for select using (id = auth.uid());
+
+create policy profiles_select_admin on public.profiles
+  for select using (public.is_admin());
+
+create policy profiles_insert_self on public.profiles
+  for insert with check (id = auth.uid());
+
+create policy profiles_update_self on public.profiles
+  for update using (id = auth.uid()) with check (id = auth.uid());
+
+create policy profiles_update_admin on public.profiles
+  for update using (public.is_admin());
+
+create policy profiles_delete_admin on public.profiles
+  for delete using (public.is_admin());
+
+drop policy if exists issues_select_auth     on public.issues;
+drop policy if exists issues_insert_auth     on public.issues;
+drop policy if exists issues_update_admin    on public.issues;
+drop policy if exists issues_update_own      on public.issues;
+drop policy if exists issues_delete_admin    on public.issues;
+
+create policy issues_select_auth on public.issues
+  for select using (auth.uid() is not null);
+
+create policy issues_insert_auth on public.issues
+  for insert with check (auth.uid() = created_by);
+
+create policy issues_update_admin on public.issues
+  for update using (public.is_admin());
+
+create policy issues_update_own on public.issues
+  for update using (created_by = auth.uid()) with check (created_by = auth.uid());
+
+create policy issues_delete_admin on public.issues
+  for delete using (public.is_admin());
+</script>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ==================================================================
+     STEP 1 — PASTE YOUR SUPABASE VALUES HERE
+     ------------------------------------------------------------------
+     Leave both empty and the app runs in demo mode (this browser only).
+     Fill them in for a real shared database with proper accounts.
+     ================================================================== */
+  var SUPABASE_URL      = "https://oswrhpvkhlpvhinsatwh.supabase.co";   // e.g. "https://abcdefghijklm.supabase.co"
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zd3JocHZraGxwdmhpbnNhdHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxMDYxODcsImV4cCI6MjEwNTY4MjE4N30.--K15fOHPJK4iGYcQBLRvJIgg2Um7C94aWYLYvO_5CY";   // the long "anon public" key
+
+  /* ==================================================================
+     ROLES AND PERMISSIONS
+     ------------------------------------------------------------------
+     Admin       : everything, including deleting issues and managing users.
+     Normal user : can view the board, report issues and change a status.
+     ================================================================== */
+  var PERMISSIONS = {
+    admin: { view: true,  create: true,  edit: true,  remove: true,  setStatus: true,  manageUsers: true  },
+    user:  { view: true,  create: true,  edit: false, remove: false, setStatus: true,  manageUsers: false }
+  };
+
+  var currentUser = null;   // { id, email, name, role }
+
+  function can(perm) {
+    return Boolean(currentUser && PERMISSIONS[currentUser.role] && PERMISSIONS[currentUser.role][perm]);
+  }
+  function isAdmin() { return can("manageUsers"); }
+
+  /* ==================================================================
+     SMALL HELPERS
+     ================================================================== */
+  function el(id) { return document.getElementById(id); }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function timeAgo(ts) {
+    if (!ts) return "—";
+    var s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 45) return "just now";
+    var m = Math.floor(s / 60); if (m < 60) return m + "m ago";
+    var h = Math.floor(m / 60); if (h < 24) return h + "h ago";
+    var d = Math.floor(h / 24); if (d < 30) return d + "d ago";
+    return new Date(ts).toLocaleDateString();
+  }
+
+  function toast(msg) {
+    var t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = msg;
+    el("toasts").appendChild(t);
+    setTimeout(function () { t.classList.add("out"); }, 2400);
+    setTimeout(function () { t.remove(); }, 2900);
+  }
+
+  function showMsg(node, text, kind) {
+    node.textContent = text || "";
+    node.className = "msg " + (kind || "error") + (text ? " show" : "");
+  }
+
+  function busy(btn, isBusy, label) {
+    if (isBusy) {
+      if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = label || "Please wait…";
+    } else {
+      btn.disabled = false;
+      if (btn.dataset.label) { btn.textContent = btn.dataset.label; delete btn.dataset.label; }
+    }
+  }
+
+  /* Friendly wording for the errors people actually hit. */
+  function friendly(message) {
+    var m = String(message || "");
+    if (/Only an administrator/i.test(m)) return "Only an administrator can do that.";
+    if (/Invalid login credentials/i.test(m)) return "Incorrect email or password.";
+    if (/Email not confirmed/i.test(m)) return "Please confirm your email first — check your inbox.";
+    if (/User already registered|already been registered/i.test(m)) return "An account with that email already exists.";
+    if (/Password should be at least/i.test(m)) return "Password must be at least 6 characters.";
+    if (/rate limit|Too many/i.test(m)) return "Too many attempts. Please wait a minute and try again.";
+    if (/valid email/i.test(m)) return "Please enter a valid email address.";
+    if (/row-level security|permission denied/i.test(m)) return "You don't have permission to do that.";
+    if (/relation .* does not exist|schema cache/i.test(m)) return "Database tables are missing. Run supabase-schema.sql first (see Connect Supabase).";
+    return m || "Something went wrong. Please try again.";
+  }
+
+  function redirectTo() {
+    return (window.location.origin + window.location.pathname).replace(/index\.html$/, "");
+  }
+
+  /* ==================================================================
+     BACKEND — two implementations behind one interface
+     so the UI never has to care which one is live.
+     ================================================================== */
+  var cloudEnabled = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase);
+  var sb = cloudEnabled ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+  /* ---------- demo backend (this browser only) ---------- */
+  var demoBackend = (function () {
+    var K_USERS   = "it.demo.users";
+    var K_SESSION = "it.demo.session";
+    var K_ISSUES  = "it.demo.issues";
+    var K_SEEDED  = "it.demo.seeded";
+
+    function read(key, fallback) {
+      try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+      catch (e) { return fallback; }
+    }
+    function write(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+    }
+    function hash(text) {
+      if (window.crypto && crypto.subtle && window.TextEncoder) {
+        return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function (buf) {
+          return Array.prototype.map.call(new Uint8Array(buf), function (b) {
+            return ("0" + b.toString(16)).slice(-2);
+          }).join("");
+        });
+      }
+      var h = 5381;
+      for (var i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
+      return Promise.resolve("plain:" + (h >>> 0).toString(16));
+    }
+    function uid() { return "i_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+    /* Seed two ready-to-use demo accounts and a few issues, once.
+       Every method below waits on `ready` first. */
+    var ready = (function () {
+      if (read(K_SEEDED, false)) return Promise.resolve();
+
+      if (read(K_USERS, null)) {          // accounts already created by hand
+        write(K_SEEDED, true);
+        return Promise.resolve();
+      }
+
+      var now = Date.now();
+      var seeded = {};
+      var seedIssues = [
+        { title: "Login page rejects a valid password",
+          description: "Typing the correct password reports 'incorrect password' on the first attempt.",
+          status: "pending", priority: "high", email: "user@demo.com" },
+        { title: "Search the dashboard by description",
+          description: "Searching should also match the issue description, not just the title.",
+          status: "done", priority: "medium", email: "admin@demo.com" },
+        { title: "Typos in the empty state message",
+          description: "", status: "pending", priority: "low", email: "admin@demo.com" }
+      ];
+
+      return Promise.all([hash("admin123"), hash("user123")]).then(function (hashes) {
+        seeded["admin@demo.com"] = { email: "admin@demo.com", name: "System Admin", role: "admin", hash: hashes[0], createdAt: now };
+        seeded["user@demo.com"]  = { email: "user@demo.com",  name: "Normal User",  role: "user",  hash: hashes[1], createdAt: now };
+        write(K_USERS, seeded);
+        write(K_ISSUES, seedIssues.map(function (it, i) {
+          return {
+            id: "seed" + i,
+            title: it.title,
+            description: it.description,
+            status: it.status,
+            priority: it.priority,
+            createdBy: it.email,
+            createdByName: "",
+            createdByEmail: it.email,
+            createdAt: now - (i + 1) * 3600000,
+            updatedAt: now - (i + 1) * 3600000
+          };
+        }));
+        write(K_SEEDED, true);
+      });
+    })();
+
+    function users() { return read(K_USERS, {}); }
+    function issues() { return read(K_ISSUES, []); }
+
+    function publicUser(rec) {
+      return rec ? { id: rec.email, email: rec.email, name: rec.name || rec.email, role: rec.role || "user" } : null;
+    }
+
+    return {
+      mode: "demo",
+      demoAccounts: [
+        { email: "admin@demo.com", password: "admin123", role: "admin" },
+        { email: "user@demo.com",  password: "user123",  role: "user"  }
+      ],
+
+      getSession: function () {
+        return ready.then(function () {
+          var email = read(K_SESSION, null);
+          return publicUser(email ? users()[email] : null);
+        });
+      },
+
+      signUp: function (opts) {
+        return ready.then(function () {
+          var all = users();
+          if (all[opts.email]) return Promise.reject(new Error("An account with that email already exists."));
+          return hash(opts.password).then(function (h) {
+            all[opts.email] = {
+              email: opts.email, name: opts.fullName || "",
+              role: opts.role === "admin" ? "admin" : "user",
+              hash: h, createdAt: Date.now()
+            };
+            write(K_USERS, all);
+            write(K_SESSION, opts.email);
+            return { needsConfirm: false, user: publicUser(all[opts.email]) };
+          });
+        });
+      },
+
+      signIn: function (email, password) {
+        return ready.then(function () {
+          var all = users();
+          if (!all[email]) return Promise.reject(new Error("No account found for that email. Create one instead."));
+          return hash(password).then(function (h) {
+            if (all[email].hash !== h) return Promise.reject(new Error("Incorrect email or password."));
+            write(K_SESSION, email);
+            return { user: publicUser(all[email]) };
+          });
+        });
+      },
+
+      signOut: function () {
+        try { localStorage.removeItem(K_SESSION); } catch (e) {}
+        return Promise.resolve();
+      },
+
+      sendReset: function () { return Promise.resolve({ demo: true }); },
+
+      updatePassword: function (email, password) {
+        return ready.then(function () {
+          var all = users();
+          if (!email || !all[email]) return Promise.reject(new Error("No account found for that email."));
+          return hash(password).then(function (h) { all[email].hash = h; write(K_USERS, all); });
+        });
+      },
+
+      /* ---- issues ---- */
+      listIssues: function () {
+        return ready.then(function () { return issues().slice(); });
+      },
+      createIssue: function (issue) {
+        return ready.then(function () {
+          var list = issues();
+          var row = {
+            id: uid(),
+            title: issue.title,
+            description: issue.description,
+            status: issue.status,
+            priority: issue.priority,
+            createdBy: currentUser.email,
+            createdByName: currentUser.name || "",
+            createdByEmail: currentUser.email,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          };
+          list.push(row);
+          write(K_ISSUES, list);
+          return row;
+        });
+      },
+      updateIssue: function (id, patch) {
+        return ready.then(function () {
+          var list = issues();
+          list.forEach(function (r) {
+            if (r.id !== id) return;
+            Object.keys(patch).forEach(function (k) { r[k] = patch[k]; });
+            r.updatedAt = Date.now();
+          });
+          write(K_ISSUES, list);
+        });
+      },
+      deleteIssue: function (id) {
+        return ready.then(function () {
+          write(K_ISSUES, issues().filter(function (r) { return r.id !== id; }));
+        });
+      },
+
+      /* ---- users ---- */
+      listUsers: function () {
+        return ready.then(function () {
+          var all = users();
+          return Object.keys(all).map(function (e) {
+            return {
+              id: e, email: e, name: all[e].name || "",
+              role: all[e].role || "user", createdAt: all[e].createdAt || null
+            };
+          });
+        });
+      },
+      setUserRole: function (id, role) {
+        return ready.then(function () {
+          var all = users();
+          if (!all[id]) return Promise.reject(new Error("User not found."));
+          all[id].role = role;
+          write(K_USERS, all);
+          if (currentUser && currentUser.id === id) { currentUser.role = role; }
+        });
+      },
+
+      onAuthChange: function () { /* nothing to watch in demo mode */ }
+    };
+  })();
+
+  /* ---------- Supabase backend ---------- */
+  var cloudBackend = {
+    mode: "supabase",
+
+    /* Turn a Supabase auth user + profile row into our normalised shape. */
+    _normalise: function (user, profile) {
+      return {
+        id: user.id,
+        email: user.email,
+        name: (profile && profile.full_name) || (user.user_metadata && user.user_metadata.full_name) || "",
+        role: (profile && profile.role) || "user"
+      };
+    },
+
+    /* Guarantee a row exists in `profiles` for this user. */
+    _ensureProfile: function (user) {
+      return sb.from("profiles").select("*").eq("id", user.id).maybeSingle().then(function (res) {
+        if (res.error) throw res.error;
+        if (res.data) return res.data;
+        var meta = user.user_metadata || {};
+        return sb.from("profiles").insert({
+          id: user.id,
+          email: user.email,
+          full_name: meta.full_name || "",
+          role: meta.role === "admin" ? "admin" : "user"
+        }).select().single().then(function (r) {
+          if (r.error) throw r.error;
+          return r.data;
+        });
+      });
+    },
+
+    getSession: function () {
+      return sb.auth.getSession().then(function (res) {
+        var session = res.data ? res.data.session : null;
+        if (!session) return null;
+        return cloudBackend._ensureProfile(session.user).then(function (profile) {
+          return cloudBackend._normalise(session.user, profile);
+        });
+      });
+    },
+
+    signUp: function (opts) {
+      return sb.auth.signUp({
+        email: opts.email,
+        password: opts.password,
+        options: {
+          data: { full_name: opts.fullName || "", role: opts.role === "admin" ? "admin" : "user" },
+          emailRedirectTo: redirectTo()
+        }
+      }).then(function (res) {
+        if (res.error) throw res.error;
+        if (!res.data.session) return { needsConfirm: true, user: null };
+        return cloudBackend._ensureProfile(res.data.session.user).then(function (profile) {
+          return { needsConfirm: false, user: cloudBackend._normalise(res.data.session.user, profile) };
+        });
+      });
+    },
+
+    signIn: function (email, password) {
+      return sb.auth.signInWithPassword({ email: email, password: password }).then(function (res) {
+        if (res.error) throw res.error;
+        return cloudBackend._ensureProfile(res.data.user).then(function (profile) {
+          return { user: cloudBackend._normalise(res.data.user, profile) };
+        });
+      });
+    },
+
+    signOut: function () {
+      return sb.auth.signOut().then(function (res) { if (res.error) throw res.error; });
+    },
+
+    sendReset: function (email) {
+      return sb.auth.resetPasswordForEmail(email, { redirectTo: redirectTo() }).then(function (res) {
+        if (res.error) throw res.error;
+        return { demo: false };
+      });
+    },
+
+    updatePassword: function (email, password) {
+      return sb.auth.updateUser({ password: password }).then(function (res) {
+        if (res.error) throw res.error;
+      });
+    },
+
+    /* ---- issues ---- */
+    listIssues: function () {
+      return sb.from("issues").select("*").order("updated_at", { ascending: false }).then(function (res) {
+        if (res.error) throw res.error;
+        return (res.data || []).map(function (r) {
+          return {
+            id: r.id,
+            title: r.title,
+            description: r.description || "",
+            status: r.status,
+            priority: r.priority,
+            createdBy: r.created_by,
+            createdByName: "",
+            createdByEmail: r.created_by_email || "",
+            createdAt: new Date(r.created_at).getTime(),
+            updatedAt: new Date(r.updated_at).getTime()
+          };
+        });
+      });
+    },
+
+    createIssue: function (issue) {
+      return sb.from("issues").insert({
+        title: issue.title,
+        description: issue.description,
+        status: issue.status,
+        priority: issue.priority,
+        created_by: currentUser.id,
+        created_by_email: currentUser.email
+      }).select().single().then(function (res) {
+        if (res.error) throw res.error;
+        return res.data;
+      });
+    },
+
+    updateIssue: function (id, patch) {
+      return sb.from("issues").update(patch).eq("id", id).then(function (res) {
+        if (res.error) throw res.error;
+      });
+    },
+
+    deleteIssue: function (id) {
+      return sb.from("issues").delete().eq("id", id).then(function (res) {
+        if (res.error) throw res.error;
+      });
+    },
+
+    /* ---- users (admin) ---- */
+    listUsers: function () {
+      return sb.from("profiles").select("*").order("created_at", { ascending: true }).then(function (res) {
+        if (res.error) throw res.error;
+        return (res.data || []).map(function (r) {
+          return {
+            id: r.id, email: r.email, name: r.full_name || "",
+            role: r.role, createdAt: r.created_at ? new Date(r.created_at).getTime() : null
+          };
+        });
+      });
+    },
+
+    setUserRole: function (id, role) {
+      return sb.from("profiles").update({ role: role }).eq("id", id).then(function (res) {
+        if (res.error) throw res.error;
+      });
+    },
+
+    onAuthChange: function (handler) {
+      sb.auth.onAuthStateChange(function (event, session) {
+        handler(event, session);
+      });
+    }
+  };
+
+  var api = cloudEnabled ? cloudBackend : demoBackend;
+
+  /* ==================================================================
+     APP STATE
+     ================================================================== */
+  var issues        = [];
+  var users         = [];
+  var view          = "board";   // board | mine | users
+  var filter        = "all";     // all | pending | done
+  var priority      = "all";     // all | low | medium | high
+  var query         = "";
+  var userQuery     = "";
+  var editingId     = null;
+  var inRecovery    = false;
+  var resetEmail    = "";
+
+  /* ==================================================================
+     SCREEN SWITCHING
+     ================================================================== */
+  function hideAll() {
+    el("authView").hidden = true;
+    el("resetView").hidden = true;
+    el("appView").hidden = true;
+  }
+
+  function showPane(name) {
+    ["pane-login", "pane-register", "pane-forgot", "pane-sent"].forEach(function (id) {
+      el(id).hidden = id !== "pane-" + name;
+    });
+  }
+
+  function showAuth(pane) {
+    hideAll();
+    el("authView").hidden = false;
+    showPane(pane || "login");
+    el("loginPassword").value = "";
+    showMsg(el("loginErr"), "");
+
+    // In demo mode, tell people which accounts already exist.
+    var hint = el("demoHint");
+    if (api.mode === "demo" && api.demoAccounts) {
+      hint.innerHTML = "Demo accounts &mdash; admin: <b>admin@demo.com</b> / <b>admin123</b>" +
+        " &nbsp;&middot;&nbsp; user: <b>user@demo.com</b> / <b>user123</b>";
+      hint.hidden = false;
+    } else {
+      hint.hidden = true;
+    }
+  }
+
+  function showReset() {
+    inRecovery = true;
+    hideAll();
+    el("resetView").hidden = false;
+    el("resetPassword").value = "";
+    el("resetConfirm").value = "";
+    el("resetPassword").focus();
+  }
+
+  function showApp() {
+    if (inRecovery) return;
+    hideAll();
+    el("appView").hidden = false;
+
+    // Sidebar identity
+    el("userName").textContent = currentUser.name || currentUser.email;
+    el("userEmail").textContent = currentUser.email;
+    el("userEmail").title = currentUser.email;
+    var roleBadge = el("userRole");
+    roleBadge.className = "badge " + (isAdmin() ? "admin" : "user");
+    roleBadge.textContent = isAdmin() ? "Administrator" : "Normal user";
+
+    // Admin-only navigation and actions
+    el("navUsers").hidden = !isAdmin();
+    el("adminLabel").hidden = !isAdmin();
+    el("newBtn").hidden = !can("create");
+    el("modeLabel").textContent = api.mode === "demo" ? "Demo (local)" : "Connected";
+    el("demoBanner").hidden = api.mode !== "demo";
+
+    // Reset the workspace before loading
+    issues = [];
+    view = "board";
+    filter = "all";
+    priority = "all";
+    query = "";
+    userQuery = "";
+    el("search").value = "";
+    el("userSearch").value = "";
+    el("priorityFilter").value = "all";
+
+    render();
+    refresh();
+    if (isAdmin()) refreshUsers();
+  }
+
+  /* ==================================================================
+     VIEW / TITLE
+     ================================================================== */
+  function setView(next) {
+    view = next;
+    document.querySelectorAll(".nav-item").forEach(function (b) {
+      b.setAttribute("aria-current", b.dataset.view === view ? "page" : "false");
+    });
+
+    var isUsers = view === "users";
+    el("issuesArea").hidden = isUsers;
+    el("usersArea").hidden = !isUsers;
+
+    var titles = {
+      board: ["Dashboard", "All issues reported in the system."],
+      mine:  ["My reports", "Issues you have reported."],
+      users: ["Users", "Manage who can access the system and what they can do."]
+    };
+    el("pageTitle").textContent = titles[view][0];
+    el("pageSub").textContent = titles[view][1];
+    el("newBtn").hidden = isUsers || !can("create");
+
+    if (isUsers) renderUsers(); else render();
+  }
+
+  /* ==================================================================
+     ISSUE RENDERING
+     ================================================================== */
+  var listEl = el("list");
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+
+  /* The set of issues the current view is about. */
+  function baseIssues() {
+    if (view === "mine") {
+      return issues.filter(function (it) {
+        return it.createdByEmail === currentUser.email || it.createdBy === currentUser.id;
+      });
+    }
+    return issues;
+  }
+
+  function visibleIssues() {
+    var q = query.trim().toLowerCase();
+    return baseIssues()
+      .filter(function (it) { return filter === "all" ? true : it.status === filter; })
+      .filter(function (it) { return priority === "all" ? true : it.priority === priority; })
+      .filter(function (it) {
+        if (!q) return true;
+        return (it.title + " " + (it.description || "") + " " + (it.createdByEmail || ""))
+          .toLowerCase().indexOf(q) !== -1;
+      })
+      .sort(function (a, b) {
+        if (a.status !== b.status) return a.status === "pending" ? -1 : 1;
+        return b.updatedAt - a.updatedAt;
+      });
+  }
+
+  function updateStats() {
+    var base = baseIssues();
+    var total = base.length;
+    var done = base.filter(function (i) { return i.status === "done"; }).length;
+    var pending = total - done;
+    var high = base.filter(function (i) { return i.priority === "high" && i.status === "pending"; }).length;
+
+    el("statTotal").textContent = total;
+    el("statPending").textContent = pending;
+    el("statDone").textContent = done;
+    el("statHigh").textContent = high;
+
+    el("cAll").textContent = total;
+    el("cPending").textContent = pending;
+    el("cDone").textContent = done;
+
+    el("navCountAll").textContent = issues.length;
+    el("navCountMine").textContent = issues.filter(function (it) {
+      return it.createdByEmail === currentUser.email || it.createdBy === currentUser.id;
+    }).length;
+
+    tabs.forEach(function (t) {
+      t.setAttribute("aria-selected", String(t.dataset.filter === filter));
+    });
+  }
+
+  function render() {
+    updateStats();
+    var items = visibleIssues();
+    listEl.innerHTML = items.length ? items.map(row).join("") : emptyState(baseIssues().length);
+  }
+
+  function row(it) {
+    var isDone = it.status === "done";
+    var maySetStatus = can("setStatus");
+    var reporter = it.createdByEmail || it.createdByName || "unknown";
+
+    var actions =
+      (can("edit")
+        ? '<button class="btn ghost icon" data-action="edit" title="Edit issue" aria-label="Edit issue">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>'
+        : "") +
+      (can("remove")
+        ? '<button class="btn ghost icon danger" data-action="delete" title="Delete issue" aria-label="Delete issue">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg></button>'
+        : "") ||
+      '<span class="when">—</span>';
+
+    return '<div class="row' + (isDone ? " is-done" : "") + '" data-id="' + esc(it.id) + '">' +
+      '<div class="col-status">' +
+        '<button class="status-btn" data-action="toggle" ' +
+          (maySetStatus ? "" : "disabled ") +
+          'title="' + (maySetStatus ? "Mark as " + (isDone ? "pending" : "done") : "You cannot change status") + '">' +
+          '<span class="pill ' + esc(it.status) + '">' +
+            (isDone ? "&#10003; Done" : "&#9679; Pending") +
+          '</span>' +
+        '</button>' +
+      '</div>' +
+      '<div>' +
+        '<div class="issue-title">' + esc(it.title) + '</div>' +
+        (it.description ? '<div class="issue-desc">' + esc(it.description) + '</div>' : "") +
+      '</div>' +
+      '<div><span class="pill ' + esc(it.priority) + '">' + esc(it.priority) + '</span></div>' +
+      '<div class="reporter"><span class="owner">' + esc(reporter) + '</span></div>' +
+      '<div class="when">' + timeAgo(it.updatedAt || it.createdAt) + '</div>' +
+      '<div class="col-actions">' + actions + '</div>' +
+    '</div>';
+  }
+
+  function emptyState(total) {
+    var msg = total === 0
+      ? "No issues yet. Report the first one to get started."
+      : "No issues match your filters.";
+    var btn = total === 0
+      ? (can("create") ? '<button class="btn primary" data-action="new">Report issue</button>' : "")
+      : '<button class="btn" data-action="clear-filters">Clear filters</button>';
+    return '<div class="empty">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M9 15l2 2 4-4"/></svg>' +
+      '<p>' + esc(msg) + '</p>' + btn + '</div>';
+  }
+
+  function refresh() {
+    return api.listIssues().then(function (rows) {
+      issues = rows || [];
+      render();
+      // Keep the admin users table's report counts accurate.
+      if (isAdmin() && view === "users") renderUsers();
+    }).catch(function (e) {
+      toast("Could not load issues: " + friendly(e.message));
+    });
+  }
+
+  function byId(id) {
+    for (var i = 0; i < issues.length; i++) if (issues[i].id === id) return issues[i];
+    return null;
+  }
+
+  /* Write, then reload so the screen always matches the database. */
+  function mutate(promise, okMsg) {
+    return promise.then(function () {
+      return refresh();
+    }).then(function () {
+      if (okMsg) toast(okMsg);
+    }).catch(function (e) {
+      toast("Error: " + friendly(e.message));
+      return refresh();
+    });
+  }
+
+  /* ==================================================================
+     ISSUE INTERACTIONS
+     ================================================================== */
+  listEl.addEventListener("click", function (e) {
+    var actionEl = e.target.closest("[data-action]");
+    if (!actionEl) return;
+    var action = actionEl.dataset.action;
+
+    if (action === "new") { openModal(null); return; }
+    if (action === "clear-filters") {
+      filter = "all"; priority = "all"; query = "";
+      el("search").value = ""; el("priorityFilter").value = "all";
+      render();
+      return;
+    }
+
+    var rowEl = e.target.closest(".row");
+    if (!rowEl) return;
+    var it = byId(rowEl.dataset.id);
+    if (!it) return;
+
+    if (action === "toggle") {
+      if (!can("setStatus")) { toast("You don't have permission to change status."); return; }
+      var next = it.status === "done" ? "pending" : "done";
+      mutate(api.updateIssue(it.id, { status: next }),
+             next === "done" ? "Marked as done" : "Moved back to pending");
+    } else if (action === "edit") {
+      if (!can("edit")) { toast("Only an administrator can edit issue details."); return; }
+      openModal(it);
+    } else if (action === "delete") {
+      if (!can("remove")) { toast("Only an administrator can delete issues."); return; }
+      if (confirm('Delete "' + it.title + '"?\nThis cannot be undone.')) {
+        mutate(api.deleteIssue(it.id), "Issue deleted");
+      }
+    }
+  });
+
+  tabs.forEach(function (t) {
+    t.addEventListener("click", function () { filter = t.dataset.filter; render(); });
+  });
+  el("search").addEventListener("input", function (e) { query = e.target.value; render(); });
+  el("priorityFilter").addEventListener("change", function (e) { priority = e.target.value; render(); });
+
+  document.querySelectorAll(".nav-item").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (b.dataset.view === "users" && !isAdmin()) { toast("Admins only."); return; }
+      setView(b.dataset.view);
+    });
+  });
+
+  /* ==================================================================
+     CREATE / EDIT DIALOG
+     ================================================================== */
+  var backdrop = el("backdrop");
+  var fTitle = el("fieldTitle");
+  var fDesc = el("fieldDesc");
+  var fStatus = el("fieldStatus");
+  var fPriority = el("fieldPriority");
+  var formErr = el("formErr");
+
+  function openModal(issue) {
+    editingId = issue ? issue.id : null;
+    el("modalTitle").textContent = issue ? "Edit issue" : "Report an issue";
+    el("saveBtn").textContent = issue ? "Save changes" : "Report issue";
+    fTitle.value = issue ? issue.title : "";
+    fDesc.value = issue ? (issue.description || "") : "";
+    fStatus.value = issue ? issue.status : "pending";
+    fPriority.value = issue ? issue.priority : "medium";
+
+    // A normal user may only change the status, so lock the detail fields.
+    var lockDetails = Boolean(issue) && !can("edit");
+    [fTitle, fDesc, fPriority].forEach(function (f) { f.disabled = lockDetails; });
+    fStatus.disabled = !can("setStatus");
+    el("modalTitle").textContent = lockDetails ? "Update status" : el("modalTitle").textContent;
+
+    showMsg(formErr, "");
+    backdrop.classList.add("open");
+    document.body.style.overflow = "hidden";
+    setTimeout(function () { (lockDetails ? fStatus : fTitle).focus(); }, 30);
+  }
+
+  function closeModal() {
+    backdrop.classList.remove("open");
+    document.body.style.overflow = "";
+    editingId = null;
+    [fTitle, fDesc, fStatus, fPriority].forEach(function (f) { f.disabled = false; });
+  }
+
+  el("newBtn").addEventListener("click", function () { openModal(null); });
+  el("cancelBtn").addEventListener("click", closeModal);
+  backdrop.addEventListener("mousedown", function (e) { if (e.target === backdrop) closeModal(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (backdrop.classList.contains("open")) closeModal();
+    if (el("setupView").classList.contains("open")) el("setupView").classList.remove("open");
+  });
+
+  el("issueForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    var lockDetails = Boolean(editingId) && !can("edit");
+    if (!editingId && !can("create")) { showMsg(formErr, "You don't have permission to report issues."); return; }
+    if (editingId && !lockDetails && !can("edit")) { showMsg(formErr, "Only an administrator can edit issue details."); return; }
+
+    var title = fTitle.value.trim();
+    if (!lockDetails && !title) { showMsg(formErr, "Please enter a title."); fTitle.focus(); return; }
+    showMsg(formErr, "");
+
+    var payload = lockDetails
+      ? { status: fStatus.value }
+      : { title: title, description: fDesc.value.trim(), status: fStatus.value, priority: fPriority.value };
+
+    var btn = el("saveBtn");
+    busy(btn, true, "Saving…");
+    var work = editingId ? api.updateIssue(editingId, payload) : api.createIssue(payload);
+
+    mutate(work, editingId ? "Changes saved" : "Issue reported")
+      .then(function () { busy(btn, false); closeModal(); });
+  });
+
+  /* ==================================================================
+     USERS (admin)
+     ================================================================== */
+  var userListEl = el("userList");
+
+  function refreshUsers() {
+    if (!isAdmin()) return Promise.resolve();
+    return api.listUsers().then(function (rows) {
+      users = rows || [];
+      renderUsers();
+    }).catch(function (e) {
+      toast("Could not load users: " + friendly(e.message));
+    });
+  }
+
+  function renderUsers() {
+    var q = userQuery.trim().toLowerCase();
+    var rows = users.filter(function (u) {
+      if (!q) return true;
+      return ((u.name || "") + " " + u.email).toLowerCase().indexOf(q) !== -1;
+    });
+
+    el("navCountUsers").textContent = users.length;
+
+    if (!rows.length) {
+      userListEl.innerHTML = '<div class="empty"><p>No users match your search.</p></div>';
+      return;
+    }
+
+    userListEl.innerHTML = rows.map(function (u) {
+      var isMe = currentUser && u.id === currentUser.id;
+      var reports = issues.filter(function (it) {
+        return it.createdByEmail === u.email || it.createdBy === u.id;
+      }).length;
+
+      return '<div class="row" data-uid="' + esc(u.id) + '">' +
+        '<div><span class="issue-title">' + esc(u.name || "—") + '</span>' +
+          (isMe ? ' <span class="badge you">you</span>' : "") + '</div>' +
+        '<div class="reporter"><span class="owner">' + esc(u.email) + '</span></div>' +
+        '<div>' +
+          '<select data-action="role" aria-label="Role for ' + esc(u.email) + '"' +
+            (isMe ? " disabled title=\"You cannot change your own role\"" : "") + ">" +
+            '<option value="user"' + (u.role === "user" ? " selected" : "") + '>Normal user</option>' +
+            '<option value="admin"' + (u.role === "admin" ? " selected" : "") + '>Administrator</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="when">' + (u.createdAt ? timeAgo(u.createdAt) : "—") + '</div>' +
+        '<div class="col-actions"><span class="when">' + reports + '</span></div>' +
+      '</div>';
+    }).join("");
+  }
+
+  el("userSearch").addEventListener("input", function (e) { userQuery = e.target.value; renderUsers(); });
+
+  userListEl.addEventListener("change", function (e) {
+    var sel = e.target.closest('[data-action="role"]');
+    if (!sel) return;
+    var rowEl = e.target.closest(".row");
+    var id = rowEl.dataset.uid;
+    var role = sel.value;
+
+    if (id === currentUser.id) {
+      toast("You cannot change your own role.");
+      renderUsers();
+      return;
+    }
+    if (!confirm("Change this user's role to " + (role === "admin" ? "Administrator" : "Normal user") + "?")) {
+      renderUsers();
+      return;
+    }
+
+    api.setUserRole(id, role).then(function () {
+      toast("Role updated");
+      return refreshUsers();
+    }).catch(function (ex) {
+      toast("Error: " + friendly(ex.message));
+      refreshUsers();
+    });
+  });
+
+  /* ==================================================================
+     AUTH ACTIONS
+     ================================================================== */
+  function selectedRole() {
+    return el("roleAdmin").checked ? "admin" : "user";
+  }
+
+  el("toRegister").addEventListener("click", function () { showMsg(el("regErr"), ""); showPane("register"); });
+  el("toForgot").addEventListener("click", function () { showMsg(el("forgotErr"), ""); showPane("forgot"); });
+  el("toLoginFromReg").addEventListener("click", function () { showAuth("login"); });
+  el("toLoginFromForgot").addEventListener("click", function () { showAuth("login"); });
+  el("sentBack").addEventListener("click", function () { showAuth("login"); });
+
+  el("loginForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = el("loginEmail").value.trim().toLowerCase();
+    var password = el("loginPassword").value;
+    var err = el("loginErr");
+    showMsg(err, "");
+
+    if (!email || !password) { showMsg(err, "Enter your email and password."); return; }
+
+    var btn = el("loginBtn");
+    busy(btn, true, "Signing in…");
+    api.signIn(email, password).then(function (res) {
+      busy(btn, false);
+      currentUser = res.user;
+      showApp();
+      toast("Signed in as " + (currentUser.role === "admin" ? "Administrator" : "Normal user"));
+    }).catch(function (ex) {
+      busy(btn, false);
+      showMsg(err, friendly(ex.message));
+    });
+  });
+
+  el("registerForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = el("regName").value.trim();
+    var email = el("regEmail").value.trim().toLowerCase();
+    var password = el("regPassword").value;
+    var confirmPw = el("regConfirm").value;
+    var role = selectedRole();
+    var err = el("regErr");
+    showMsg(err, "");
+
+    if (!email) { showMsg(err, "Enter your email."); return; }
+    if (password.length < 6) { showMsg(err, "Password must be at least 6 characters."); return; }
+    if (password !== confirmPw) { showMsg(err, "The two passwords do not match."); return; }
+
+    var btn = el("regBtn");
+    busy(btn, true, "Creating…");
+    api.signUp({ email: email, password: password, fullName: name, role: role }).then(function (res) {
+      busy(btn, false);
+      el("loginEmail").value = email;
+      if (res.needsConfirm) {
+        el("sentTitle").textContent = "Confirm your email";
+        el("sentBody").textContent = "We sent a confirmation link to " + email + ". Click it, then sign in.";
+        showMsg(el("sentNote"), "Didn't get it? Check your spam folder.", "info");
+        el("sentDemoWrap").hidden = true;
+        showPane("sent");
+      } else {
+        currentUser = res.user;
+        showApp();
+        toast("Account created — welcome!");
+      }
+    }).catch(function (ex) {
+      busy(btn, false);
+      showMsg(err, friendly(ex.message));
+    });
+  });
+
+  el("forgotForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = el("forgotEmail").value.trim();
+    var err = el("forgotErr");
+    showMsg(err, "");
+    if (!email) { showMsg(err, "Enter your email."); return; }
+
+    var btn = el("forgotBtn");
+    busy(btn, true, "Sending…");
+    api.sendReset(email).then(function (res) {
+      busy(btn, false);
+      if (res && res.demo) {
+        el("sentTitle").textContent = "Demo mode can't send email";
+        el("sentBody").textContent =
+          "Sending a reset link needs a mail server. Connect Supabase (see the app sidebar) " +
+          "and this becomes a real email. For now you can go straight to the reset screen.";
+        showMsg(el("sentNote"), "");
+        el("sentDemoWrap").hidden = false;
+      } else {
+        el("sentTitle").textContent = "Check your email";
+        el("sentBody").textContent = "If an account exists for " + email +
+          ", we've sent a link to reset your password.";
+        showMsg(el("sentNote"), "Nothing arrived? Check spam, or try again in a minute.", "info");
+        el("sentDemoWrap").hidden = true;
+      }
+      showPane("sent");
+    }).catch(function (ex) {
+      busy(btn, false);
+      showMsg(err, friendly(ex.message));
+    });
+  });
+
+  el("sentDemoBtn").addEventListener("click", function () {
+    resetEmail = el("forgotEmail").value.trim().toLowerCase();
+    showReset();
+  });
+
+  el("resetForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var password = el("resetPassword").value;
+    var confirmPw = el("resetConfirm").value;
+    var err = el("resetErr");
+    showMsg(err, "");
+
+    if (password.length < 6) { showMsg(err, "Password must be at least 6 characters."); return; }
+    if (password !== confirmPw) { showMsg(err, "The two passwords do not match."); return; }
+
+    var btn = el("resetBtn");
+    busy(btn, true, "Saving…");
+    api.updatePassword(resetEmail, password).then(function () {
+      busy(btn, false);
+      inRecovery = false;
+      if (resetEmail) el("loginEmail").value = resetEmail;
+      toast("Password updated");
+      showAuth("login");
+    }).catch(function (ex) {
+      busy(btn, false);
+      showMsg(err, friendly(ex.message));
+    });
+  });
+
+  el("resetCancel").addEventListener("click", function () { inRecovery = false; showAuth("login"); });
+
+  /* ---------- log out ---------- */
+  el("signOutBtn").addEventListener("click", function () {
+    var btn = el("signOutBtn");
+    busy(btn, true, "…");
+    api.signOut().then(function () {
+      busy(btn, false);
+      currentUser = null;
+      issues = [];
+      users = [];
+      query = ""; filter = "all"; priority = "all";
+      render();
+      showAuth("login");
+      toast("Logged out");
+    }).catch(function (ex) {
+      busy(btn, false);
+      toast("Error: " + friendly(ex.message));
+    });
+  });
+
+  /* ==================================================================
+     SETUP PANEL
+     ================================================================== */
+  /* The SQL the setup panel shows and copies. Its literal text lives in the
+     raw "schemaSql" block beside the setup panel, so it can stay word-for-word
+     identical to supabase-schema.sql. */
+  var SETUP_SQL = (el("schemaSql").textContent || "").replace(/^\s+/, "").replace(/\s+$/, "");
+
+  el("sqlBox").textContent = SETUP_SQL;
+
+  function openSetup() { el("setupView").classList.add("open"); }
+  el("setupFromBanner").addEventListener("click", openSetup);
+  el("setupClose").addEventListener("click", function () { el("setupView").classList.remove("open"); });
+  el("setupView").addEventListener("mousedown", function (e) {
+    if (e.target === el("setupView")) el("setupView").classList.remove("open");
+  });
+  el("copySqlBtn").addEventListener("click", function () {
+    var btn = el("copySqlBtn");
+    var done = function () { toast("SQL copied"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(SETUP_SQL).then(done).catch(function () { fallbackCopy(); });
+    } else { fallbackCopy(); }
+    function fallbackCopy() {
+      var ta = document.createElement("textarea");
+      ta.value = SETUP_SQL;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { toast("Copy failed — select the text manually"); }
+      ta.remove();
+    }
+  });
+
+  /* ==================================================================
+     START UP
+     ================================================================== */
+  api.onAuthChange(function (event) {
+    // Supabase tells us when the user arrives from a password-reset link.
+    if (event === "PASSWORD_RECOVERY") { showReset(); }
+    if (event === "SIGNED_OUT" && currentUser) {
+      currentUser = null;
+      showAuth("login");
+    }
+  });
+
+  api.getSession().then(function (user) {
+    if (user) {
+      currentUser = user;
+      showApp();
+    } else {
+      showAuth("login");
+    }
+  }).catch(function () {
+    showAuth("login");
+  });
+})();
+</script>
+</body>
+</html>
