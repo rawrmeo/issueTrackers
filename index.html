@@ -395,6 +395,104 @@
     .report-table th, .report-table td { border-color: #bbb !important; }
   }
 
+  /* ============================ topbar & profile menu ============================ */
+  .topbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-bottom: 18px; }
+
+  .icon-btn {
+    position: relative; width: 38px; height: 38px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    display: grid; place-items: center;
+  }
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+  .icon-btn svg { width: 18px; height: 18px; }
+  .dot {
+    position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px;
+    border-radius: 999px; background: var(--danger); color: #fff;
+    font-size: 10.5px; font-weight: 700; display: grid; place-items: center;
+    border: 2px solid var(--bg);
+  }
+
+  .profile-wrap { position: relative; }
+  .profile-btn {
+    display: flex; align-items: center; gap: 9px; padding: 4px 9px 4px 4px;
+    border: 1px solid var(--border); background: var(--surface); border-radius: 999px;
+  }
+  .profile-btn:hover { background: var(--surface-2); }
+  .profile-btn > svg { width: 15px; height: 15px; color: var(--muted); }
+  .profile-meta { display: flex; flex-direction: column; line-height: 1.25; text-align: left; max-width: 150px; }
+  .profile-meta .nm { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .profile-meta .rl { font-size: 11px; color: var(--muted); }
+
+  .avatar {
+    width: 30px; height: 30px; border-radius: 999px; flex: none;
+    background: var(--accent); color: #fff; display: grid; place-items: center;
+    font-size: 12px; font-weight: 700; overflow: hidden;
+    background-size: cover; background-position: center;
+  }
+  .avatar.lg { width: 52px; height: 52px; font-size: 18px; }
+  .avatar.xl { width: 84px; height: 84px; font-size: 30px; }
+
+  .dropdown {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 45;
+    width: 272px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: var(--shadow); padding: 7px;
+    animation: pop .14s ease;
+  }
+  .dropdown .menu-head { display: flex; gap: 11px; align-items: center; padding: 10px 10px 12px; }
+  .dropdown .menu-head .nm { font-size: 14px; font-weight: 650; }
+  .dropdown .menu-head .em { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+  .menu-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    border: 0; background: transparent; color: var(--text);
+    padding: 9px 10px; border-radius: 9px; font-size: 13.5px; font-weight: 550;
+  }
+  .menu-item svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+  .menu-item:hover { background: var(--surface-2); }
+  .menu-item.danger { color: var(--danger); }
+  .menu-item.danger svg { color: var(--danger); }
+  .menu-item .pill-count {
+    margin-left: auto; background: var(--danger); color: #fff;
+    font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 1px 7px;
+  }
+  .dropdown hr { border: 0; border-top: 1px solid var(--border); margin: 6px 4px; }
+
+  /* ============================ notifications ============================ */
+  .notif { display: flex; gap: 12px; padding: 13px 15px; border-bottom: 1px solid var(--border); }
+  .notif:last-child { border-bottom: 0; }
+  .notif.unread { background: color-mix(in srgb, var(--accent-soft) 50%, transparent); }
+  .notif .ic {
+    width: 32px; height: 32px; border-radius: 9px; flex: none;
+    display: grid; place-items: center; background: var(--surface-2); color: var(--muted);
+  }
+  .notif .ic svg { width: 16px; height: 16px; }
+  .notif .ic.created { background: var(--accent-soft); color: var(--accent); }
+  .notif .ic.done { background: var(--done-soft);    color: var(--done); }
+  .notif .ic.high { background: var(--high-soft);    color: var(--high); }
+  .notif .tt { font-size: 13.5px; font-weight: 600; }
+  .notif .bd { font-size: 12.5px; color: var(--muted); margin-top: 2px; word-break: break-word; }
+  .notif .tm { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+
+  /* ============================ preference switches ============================ */
+  .pref { display: flex; align-items: flex-start; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+  .pref:last-of-type { border-bottom: 0; }
+  .pref .txt { flex: 1; }
+  .pref .txt .t { font-size: 14px; font-weight: 600; }
+  .pref .txt .d { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .switch { position: relative; flex: none; width: 42px; height: 24px; margin-top: 2px; }
+  .switch input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 2; }
+  .switch .track { position: absolute; inset: 0; border-radius: 999px; background: var(--border); transition: background .15s; }
+  .switch .knob {
+    position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 999px;
+    background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s;
+  }
+  .switch input:checked ~ .track { background: var(--accent); }
+  .switch input:checked ~ .knob { transform: translateX(18px); }
+  .switch input:focus-visible ~ .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .profile-grid { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+  .profile-grid .who { flex: none; width: 150px; text-align: center; }
+  .profile-grid .fields { flex: 1; min-width: 240px; }
+
   /* ============================ responsive ============================ */
   @media (max-width: 900px) {
     .status-select { max-width: 100%; }
@@ -644,28 +742,77 @@
         <span>Settings</span>
       </button>
     </nav>
-
-    <div class="spacer"></div>
-
-    <div class="user-card">
-      <div>
-        <div class="name" id="userName">—</div>
-        <div class="email" id="userEmail">—</div>
-      </div>
-      <div class="foot">
-        <span class="badge" id="userRole">user</span>
-        <button class="btn ghost" id="signOutBtn" title="Log out">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>
-          </svg>
-          Log out
-        </button>
-      </div>
-    </div>
   </aside>
 
   <!-- ---------------- main ---------------- -->
   <main class="main">
+    <!-- top bar: notifications + profile menu -->
+    <div class="topbar">
+      <button class="icon-btn" id="bellBtn" aria-label="Notifications" title="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+        </svg>
+        <span class="dot" id="bellDot" hidden>0</span>
+      </button>
+
+      <div class="profile-wrap">
+        <button class="profile-btn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+          <span class="avatar" id="avatarTop"></span>
+          <span class="profile-meta">
+            <span class="nm" id="topName">—</span>
+            <span class="rl" id="topRole">—</span>
+          </span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+        </button>
+
+        <div class="dropdown" id="profileMenu" hidden>
+          <div class="menu-head">
+            <span class="avatar lg" id="menuAvatar"></span>
+            <div style="min-width:0;">
+              <div class="nm" id="menuName">—</div>
+              <div class="em" id="menuEmail">—</div>
+              <div style="margin-top:5px;"><span class="badge" id="menuRole">user</span></div>
+            </div>
+          </div>
+          <hr />
+          <button class="menu-item" data-menu="profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+            </svg>
+            My Profile
+          </button>
+          <button class="menu-item" data-menu="mine">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg>
+            My Issues
+          </button>
+          <button class="menu-item" data-menu="notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" />
+            </svg>
+            Notifications
+            <span class="pill-count" id="menuNotifCount" hidden>0</span>
+          </button>
+          <button class="menu-item" data-menu="prefs">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 7.26 19.6l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.26 14H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.74l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 10 4.6V4a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 2.74 1.17l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 10H20a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            Settings
+          </button>
+          <hr />
+          <button class="menu-item danger" id="signOutBtn" data-menu="signout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5M21 12H9" />
+            </svg>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="banner" id="demoBanner" hidden style="margin-bottom:18px;">
       <span><b>Demo mode.</b> Supabase isn't configured yet, so everything is stored in this browser only.</span>
       <button class="btn" id="setupFromBanner">Connect Supabase</button>
@@ -855,6 +1002,97 @@
         <dl class="kv" id="statusList"></dl>
       </section>
     </div>
+
+    <!-- profile (everyone) -->
+    <div id="profileArea" class="settings" hidden>
+      <section class="card">
+        <h3>My profile</h3>
+        <p class="card-sub">Your name and picture are visible to everyone who signs in.</p>
+        <div class="profile-grid">
+          <div class="who">
+            <div class="avatar xl" id="profAvatar"></div>
+            <div class="card-row" style="justify-content:center;margin-top:12px;">
+              <button class="btn" id="avatarPick">Change</button>
+              <button class="btn ghost" id="avatarRemove">Remove</button>
+            </div>
+            <p class="card-note" style="margin-top:8px;">Square image, saved at 128&times;128.</p>
+            <input type="file" id="avatarFile" accept="image/*" />
+          </div>
+          <div class="fields">
+            <div class="field">
+              <label for="profName">Full name</label>
+              <input id="profName" maxlength="80" placeholder="Your name" />
+            </div>
+            <div class="field">
+              <label for="profEmail">Email</label>
+              <input id="profEmail" disabled />
+            </div>
+            <div class="field">
+              <label>Role</label>
+              <div><span class="badge" id="profRole">user</span></div>
+            </div>
+            <div class="card-row">
+              <button class="btn primary" id="profSave">Save changes</button>
+              <span class="card-note" id="profNote"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- notifications (everyone) -->
+    <div id="notifArea" hidden>
+      <section class="card">
+        <div class="card-row" style="justify-content:space-between;">
+          <div>
+            <h3>Notifications</h3>
+            <p class="card-sub" style="margin-bottom:0;">Activity on issues across the system.</p>
+          </div>
+          <div class="card-row">
+            <button class="btn" id="notifMarkRead">Mark all as read</button>
+            <button class="btn" id="notifPrefsBtn">Notification settings</button>
+          </div>
+        </div>
+      </section>
+      <div class="card" style="padding:0;overflow:hidden;" id="notifList"></div>
+    </div>
+
+    <!-- personal settings (everyone) -->
+    <div id="prefsArea" hidden>
+      <section class="card">
+        <h3>Notification preferences</h3>
+        <p class="card-sub">Choose what shows up in your notifications. Changes save immediately.</p>
+
+        <div class="pref">
+          <div class="txt">
+            <div class="t">New issues reported by others</div>
+            <div class="d">When someone else reports an issue.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="prefNew" /><span class="track"></span><span class="knob"></span></label>
+        </div>
+
+        <div class="pref">
+          <div class="txt">
+            <div class="t">Issues marked as done</div>
+            <div class="d">When an issue reaches the Done status, including your own.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="prefDone" /><span class="track"></span><span class="knob"></span></label>
+        </div>
+
+        <div class="pref">
+          <div class="txt">
+            <div class="t">Open high-priority issues</div>
+            <div class="d">Anything still open that is marked High priority.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="prefHigh" /><span class="track"></span><span class="knob"></span></label>
+        </div>
+
+        <div class="card-row" style="margin-top:18px;">
+          <button class="btn" id="prefsToNotifs">View notifications</button>
+          <span class="card-note" id="prefsNote"></span>
+        </div>
+      </section>
+    </div>
   </main>
 </div>
 
@@ -953,6 +1191,14 @@ create table if not exists public.profiles (
   role       text        not null default 'user' check (role in ('admin','user')),
   created_at timestamptz not null default now()
 );
+
+-- Extra profile fields. "add column if not exists" means this also upgrades
+-- a database that was created before these columns existed.
+alter table public.profiles add column if not exists avatar_url           text        not null default '';
+alter table public.profiles add column if not exists notify_new_issue     boolean     not null default true;
+alter table public.profiles add column if not exists notify_status_done   boolean     not null default true;
+alter table public.profiles add column if not exists notify_high_priority boolean     not null default true;
+alter table public.profiles add column if not exists notifications_seen_at timestamptz not null default 'epoch';
 
 -- 2. Issues — the tracker records
 create table if not exists public.issues (
@@ -1250,6 +1496,7 @@ create policy issues_delete_admin on public.issues
     if (/row-level security|permission denied/i.test(m)) return "You don't have permission to do that.";
     if (/relation .* does not exist|schema cache/i.test(m)) return "Database tables are missing. Run supabase-schema.sql first (see Connect Supabase).";
     if (/issues_status_check|violates check constraint/i.test(m)) return "Your database doesn't accept the \"None\" status yet. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
+    if (/column .* does not exist/i.test(m)) return "Your database is missing some newer profile columns. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
     return m || "Something went wrong. Please try again.";
   }
 
@@ -1341,7 +1588,21 @@ create policy issues_delete_admin on public.issues
     function issues() { return read(K_ISSUES, []); }
 
     function publicUser(rec) {
-      return rec ? { id: rec.email, email: rec.email, name: rec.name || rec.email, role: rec.role || "user" } : null;
+      if (!rec) return null;
+      var prefs = rec.notify || {};
+      return {
+        id: rec.email,
+        email: rec.email,
+        name: rec.name || "",
+        role: rec.role || "user",
+        avatarUrl: rec.avatarUrl || "",
+        seenAt: rec.seenAt || 0,
+        notify: {
+          newIssue: prefs.newIssue !== false,
+          statusDone: prefs.statusDone !== false,
+          highPriority: prefs.highPriority !== false
+        }
+      };
     }
 
     return {
@@ -1489,6 +1750,20 @@ create policy issues_delete_admin on public.issues
         });
       },
 
+      updateProfile: function (patch) {
+        return ready.then(function () {
+          var all = users();
+          var rec = all[currentUser.email];
+          if (!rec) return Promise.reject(new Error("User not found."));
+          if (patch.name !== undefined) rec.name = patch.name;
+          if (patch.avatarUrl !== undefined) rec.avatarUrl = patch.avatarUrl;
+          if (patch.seenAt !== undefined) rec.seenAt = patch.seenAt;
+          if (patch.notify) rec.notify = patch.notify;
+          write(K_USERS, all);
+          return publicUser(rec);
+        });
+      },
+
       onAuthChange: function () { /* nothing to watch in demo mode */ }
     };
   })();
@@ -1503,7 +1778,15 @@ create policy issues_delete_admin on public.issues
         id: user.id,
         email: user.email,
         name: (profile && profile.full_name) || (user.user_metadata && user.user_metadata.full_name) || "",
-        role: (profile && profile.role) || "user"
+        role: (profile && profile.role) || "user",
+        avatarUrl: (profile && profile.avatar_url) || "",
+        seenAt: profile && profile.notifications_seen_at
+          ? new Date(profile.notifications_seen_at).getTime() : 0,
+        notify: {
+          newIssue: !profile || profile.notify_new_issue !== false,
+          statusDone: !profile || profile.notify_status_done !== false,
+          highPriority: !profile || profile.notify_high_priority !== false
+        }
       };
     },
 
@@ -1673,6 +1956,25 @@ create policy issues_delete_admin on public.issues
       });
     },
 
+    /* Update the signed-in user's own profile row. */
+    updateProfile: function (patch) {
+      var row = {};
+      if (patch.name !== undefined)      row.full_name = patch.name;
+      if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl;
+      if (patch.seenAt !== undefined)    row.notifications_seen_at = new Date(patch.seenAt).toISOString();
+      if (patch.notify) {
+        if (patch.notify.newIssue !== undefined)     row.notify_new_issue = patch.notify.newIssue;
+        if (patch.notify.statusDone !== undefined)   row.notify_status_done = patch.notify.statusDone;
+        if (patch.notify.highPriority !== undefined) row.notify_high_priority = patch.notify.highPriority;
+      }
+      return sb.from("profiles").update(row).eq("id", currentUser.id).select().single().then(function (res) {
+        if (res.error) throw res.error;
+        return cloudBackend._normalise(
+          { id: currentUser.id, email: currentUser.email, user_metadata: {} }, res.data
+        );
+      });
+    },
+
     onAuthChange: function (handler) {
       sb.auth.onAuthStateChange(function (event, session) {
         handler(event, session);
@@ -1743,13 +2045,10 @@ create policy issues_delete_admin on public.issues
     hideAll();
     el("appView").hidden = false;
 
-    // Sidebar identity
-    el("userName").textContent = currentUser.name || currentUser.email;
-    el("userEmail").textContent = currentUser.email;
-    el("userEmail").title = currentUser.email;
-    var roleBadge = el("userRole");
-    roleBadge.className = "badge " + (isAdmin() ? "admin" : "user");
-    roleBadge.textContent = isAdmin() ? "Administrator" : "Normal user";
+    // Identity in the top bar and the profile menu
+    renderIdentity();
+    updateBell();
+    closeMenu();
 
     // Admin-only navigation and actions
     el("navUsers").hidden = !isAdmin();
@@ -1790,14 +2089,20 @@ create policy issues_delete_admin on public.issues
     el("settingsArea").hidden   = view !== "settings";
     el("statisticsArea").hidden = view !== "statistics";
     el("reportArea").hidden     = view !== "report";
+    el("profileArea").hidden    = view !== "profile";
+    el("notifArea").hidden      = view !== "notifications";
+    el("prefsArea").hidden      = view !== "prefs";
 
     var titles = {
-      board:      ["Dashboard", "All issues reported in the system."],
-      mine:       ["My reports", "Issues you have reported."],
-      statistics: ["Statistics", "A summary of every issue, for review."],
-      users:      ["Users", "Manage who can access the system and what they can do."],
-      report:     ["Reports", "Build a printable report for a period."],
-      settings:   ["Settings", "Back up, restore and maintain the system."]
+      board:         ["Dashboard", "All issues reported in the system."],
+      mine:          ["My reports", "Issues you have reported."],
+      statistics:    ["Statistics", "A summary of every issue, for review."],
+      profile:       ["My profile", "Your name, picture and role."],
+      notifications: ["Notifications", "Activity on issues across the system."],
+      prefs:         ["My settings", "Choose what you get notified about."],
+      users:         ["Users", "Manage who can access the system and what they can do."],
+      report:        ["Reports", "Build a printable report for a period."],
+      settings:      ["Settings", "Back up, restore and maintain the system."]
     };
     var t = titles[view] || titles.board;
     el("pageTitle").textContent = t[0];
@@ -1808,6 +2113,9 @@ create policy issues_delete_admin on public.issues
 
     if (view === "statistics") renderStatistics();
     else if (view === "report") renderReport();
+    else if (view === "profile") renderProfile();
+    else if (view === "notifications") renderNotifications();
+    else if (view === "prefs") renderPrefs();
     else if (view === "users") renderUsers();
     else if (view === "settings") renderStatus();
     else render();
@@ -1947,7 +2255,9 @@ create policy issues_delete_admin on public.issues
       if (isAdmin() && view === "users") renderUsers();
       if (isAdmin() && view === "settings") renderStatus();
       if (view === "statistics") renderStatistics();
+      if (view === "notifications") renderNotifications();
       if (isAdmin() && view === "report") renderReport();
+      updateBell();
     }).catch(function (e) {
       toast("Could not load issues: " + friendly(e.message));
     });
@@ -2083,6 +2393,7 @@ create policy issues_delete_admin on public.issues
     if (e.key !== "Escape") return;
     if (backdrop.classList.contains("open")) closeModal();
     if (el("setupView").classList.contains("open")) el("setupView").classList.remove("open");
+    closeMenu();
   });
 
   el("issueForm").addEventListener("submit", function (e) {
@@ -2635,6 +2946,313 @@ create policy issues_delete_admin on public.issues
   });
 
   /* ==================================================================
+     IDENTITY — top-bar avatar and the profile menu
+     ================================================================== */
+  function initials(name, email) {
+    var s = String(name || email || "?").trim();
+    var parts = s.split(/[^A-Za-z0-9]+/).filter(Boolean);
+    if (!parts.length) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+  }
+
+  /* The avatar is either the saved picture or the user's initials.
+     Only data:image/ URLs are accepted, so a tampered profile row cannot
+     inject anything else into the style. */
+  function paintAvatar(node) {
+    if (!node) return;
+    var url = currentUser ? currentUser.avatarUrl : "";
+    if (url && /^data:image\//.test(url)) {
+      node.style.backgroundImage = "url(" + url + ")";
+      node.textContent = "";
+    } else {
+      node.style.backgroundImage = "";
+      node.textContent = currentUser ? initials(currentUser.name, currentUser.email) : "?";
+    }
+  }
+
+  function renderIdentity() {
+    if (!currentUser) return;
+    var roleText = isAdmin() ? "Administrator" : "Normal user";
+
+    el("topName").textContent = currentUser.name || currentUser.email;
+    el("topRole").textContent = roleText;
+    el("menuName").textContent = currentUser.name || "(no name set)";
+    el("menuEmail").textContent = currentUser.email;
+    el("menuEmail").title = currentUser.email;
+
+    ["menuRole", "profRole"].forEach(function (id) {
+      var b = el(id);
+      b.className = "badge " + (isAdmin() ? "admin" : "user");
+      b.textContent = roleText;
+    });
+
+    ["avatarTop", "menuAvatar", "profAvatar"].forEach(function (id) { paintAvatar(el(id)); });
+
+    el("profName").value = currentUser.name || "";
+    el("profEmail").value = currentUser.email;
+  }
+
+  function closeMenu() {
+    var m = el("profileMenu");
+    if (!m) return;
+    m.hidden = true;
+    el("profileBtn").setAttribute("aria-expanded", "false");
+  }
+
+  function toggleMenu() {
+    var m = el("profileMenu");
+    var open = m.hidden;
+    m.hidden = !open;
+    el("profileBtn").setAttribute("aria-expanded", String(open));
+  }
+
+  el("profileBtn").addEventListener("click", function (e) {
+    e.stopPropagation();
+    toggleMenu();
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!el("profileMenu").hidden && !e.target.closest(".profile-wrap")) closeMenu();
+  });
+
+  el("profileMenu").addEventListener("click", function (e) {
+    var item = e.target.closest("[data-menu]");
+    if (!item) return;
+    var what = item.dataset.menu;
+    if (what === "signout") return;          // handled by its own listener
+    closeMenu();
+    if (what === "profile") setView("profile");
+    else if (what === "mine") setView("mine");
+    else if (what === "notifications") setView("notifications");
+    else if (what === "prefs") setView("prefs");
+  });
+
+  el("bellBtn").addEventListener("click", function () { setView("notifications"); });
+
+  /* ==================================================================
+     NOTIFICATIONS — derived from issue activity, filtered by preference
+     ================================================================== */
+  function buildNotifications() {
+    if (!currentUser) return [];
+    var prefs = currentUser.notify || {};
+    var out = [];
+
+    issues.forEach(function (it) {
+      var mine = isMine(it);
+
+      if (prefs.newIssue !== false && !mine && it.createdAt) {
+        out.push({
+          kind: "created", at: it.createdAt, title: "New issue reported",
+          body: it.title + (it.createdByEmail ? " \u2014 by " + it.createdByEmail : "")
+        });
+      }
+      if (prefs.statusDone !== false && it.status === "done" && it.updatedAt) {
+        out.push({ kind: "done", at: it.updatedAt, title: "Marked as done", body: it.title });
+      }
+      if (prefs.highPriority !== false && it.priority === "high" && it.status !== "done" && it.createdAt) {
+        out.push({ kind: "high", at: it.createdAt, title: "Open high-priority issue", body: it.title });
+      }
+    });
+
+    out.sort(function (a, b) { return b.at - a.at; });
+    return out;
+  }
+
+  function unreadCount() {
+    if (!currentUser) return 0;
+    var seen = currentUser.seenAt || 0;
+    return buildNotifications().filter(function (n) { return n.at > seen; }).length;
+  }
+
+  function updateBell() {
+    var n = unreadCount();
+
+    var dot = el("bellDot");
+    dot.hidden = n === 0;
+    dot.textContent = n > 99 ? "99+" : String(n);
+    dot.title = n + " unread";
+
+    var mc = el("menuNotifCount");
+    mc.hidden = n === 0;
+    mc.textContent = String(n);
+  }
+
+  var NOTIF_ICONS = {
+    created: '<path d="M12 5v14M5 12h14"/>',
+    done:    '<path d="M5 13l4 4L19 7"/>',
+    high:    '<path d="M12 9v4M12 17h.01"/>' +
+             '<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
+  };
+
+  function renderNotifications() {
+    var list = buildNotifications();
+    var seen = currentUser.seenAt || 0;
+    var wrap = el("notifList");
+
+    if (!list.length) {
+      wrap.innerHTML = '<div class="empty" style="border:0;background:transparent;">' +
+        '<p>No notifications yet. Activity matching your preferences appears here.</p>' +
+        '<button class="btn" data-goto="prefs">Notification settings</button></div>';
+      return;
+    }
+
+    wrap.innerHTML = list.slice(0, 60).map(function (n) {
+      return '<div class="notif' + (n.at > seen ? " unread" : "") + '">' +
+        '<span class="ic ' + n.kind + '">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+          'stroke-linecap="round" stroke-linejoin="round">' + (NOTIF_ICONS[n.kind] || "") + '</svg>' +
+        '</span>' +
+        '<div style="min-width:0;">' +
+          '<div class="tt">' + esc(n.title) + '</div>' +
+          '<div class="bd">' + esc(n.body) + '</div>' +
+          '<div class="tm">' + timeAgo(n.at) + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  el("notifList").addEventListener("click", function (e) {
+    var g = e.target.closest("[data-goto]");
+    if (g) setView(g.dataset.goto);
+  });
+
+  el("notifMarkRead").addEventListener("click", function () {
+    var now = Date.now();
+    api.updateProfile({ seenAt: now }).then(function (u) {
+      if (u) currentUser = u;
+      currentUser.seenAt = now;
+      renderNotifications();
+      updateBell();
+      toast("All notifications marked as read");
+    }).catch(function (ex) {
+      // Still clear it for this session so the count is not stuck.
+      currentUser.seenAt = now;
+      renderNotifications();
+      updateBell();
+      toast(friendly(ex.message));
+    });
+  });
+
+  el("notifPrefsBtn").addEventListener("click", function () { setView("prefs"); });
+  el("prefsToNotifs").addEventListener("click", function () { setView("notifications"); });
+
+  /* ==================================================================
+     NOTIFICATION PREFERENCES
+     ================================================================== */
+  function renderPrefs() {
+    var p = currentUser.notify || {};
+    el("prefNew").checked  = p.newIssue !== false;
+    el("prefDone").checked = p.statusDone !== false;
+    el("prefHigh").checked = p.highPriority !== false;
+    el("prefsNote").textContent = "";
+  }
+
+  function savePrefs() {
+    var notify = {
+      newIssue:     el("prefNew").checked,
+      statusDone:   el("prefDone").checked,
+      highPriority: el("prefHigh").checked
+    };
+
+    el("prefsNote").textContent = "Saving…";
+    api.updateProfile({ notify: notify }).then(function (u) {
+      if (u) currentUser = u;
+      else currentUser.notify = notify;
+      el("prefsNote").textContent = "Saved";
+      updateBell();
+      if (view === "notifications") renderNotifications();
+    }).catch(function (ex) {
+      el("prefsNote").textContent = "";
+      // Keep the choice for this session so the UI stays consistent.
+      currentUser.notify = notify;
+      updateBell();
+      toast("Could not save: " + friendly(ex.message));
+    });
+  }
+
+  ["prefNew", "prefDone", "prefHigh"].forEach(function (id) {
+    el(id).addEventListener("change", savePrefs);
+  });
+
+  /* ==================================================================
+     PROFILE
+     ================================================================== */
+  function renderProfile() {
+    renderIdentity();
+    el("profNote").textContent = "";
+  }
+
+  el("profSave").addEventListener("click", function () {
+    var name = el("profName").value.trim();
+    var btn = el("profSave");
+    busy(btn, true, "Saving…");
+    api.updateProfile({ name: name }).then(function (u) {
+      busy(btn, false);
+      if (u) currentUser = u;
+      else currentUser.name = name;
+      renderIdentity();
+      el("profNote").textContent = "Saved";
+      toast("Profile updated");
+    }).catch(function (ex) {
+      busy(btn, false);
+      toast("Error: " + friendly(ex.message));
+    });
+  });
+
+  /* Shrink the chosen picture to 128x128 before storing it, so the row
+     stays small and saves quickly. */
+  function saveAvatar(dataUrl) {
+    api.updateProfile({ avatarUrl: dataUrl }).then(function (u) {
+      if (u) currentUser = u;
+      else currentUser.avatarUrl = dataUrl;
+      renderIdentity();
+      toast(dataUrl ? "Profile picture updated" : "Profile picture removed");
+    }).catch(function (ex) {
+      toast("Error: " + friendly(ex.message));
+    });
+  }
+
+  el("avatarPick").addEventListener("click", function () { el("avatarFile").click(); });
+
+  el("avatarFile").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { toast("Please choose an image file."); return; }
+
+    var reader = new FileReader();
+    reader.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var size = 128;
+          var canvas = document.createElement("canvas");
+          canvas.width = size;
+          canvas.height = size;
+          var ctx = canvas.getContext("2d");
+          var scale = Math.max(size / img.width, size / img.height);
+          var w = img.width * scale;
+          var h = img.height * scale;
+          // White backdrop, so a transparent PNG doesn't come out black.
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, size, size);
+          ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+          saveAvatar(canvas.toDataURL("image/jpeg", 0.85));
+        } catch (err) {
+          toast("Could not process that image.");
+        }
+      };
+      img.onerror = function () { toast("Could not read that image."); };
+      img.src = String(reader.result);
+    };
+    reader.onerror = function () { toast("Could not read that file."); };
+    reader.readAsDataURL(file);
+  });
+
+  el("avatarRemove").addEventListener("click", function () { saveAvatar(""); });
+
+  /* ==================================================================
      AUTH ACTIONS
      ================================================================== */
   function selectedRole() {
@@ -2771,9 +3389,11 @@ create policy issues_delete_admin on public.issues
   /* ---------- log out ---------- */
   el("signOutBtn").addEventListener("click", function () {
     var btn = el("signOutBtn");
-    busy(btn, true, "…");
+    // Not busy(): that would replace the icon inside the menu item.
+    btn.disabled = true;
     api.signOut().then(function () {
-      busy(btn, false);
+      btn.disabled = false;
+      closeMenu();
       currentUser = null;
       issues = [];
       users = [];
@@ -2782,7 +3402,7 @@ create policy issues_delete_admin on public.issues
       showAuth("login");
       toast("Logged out");
     }).catch(function (ex) {
-      busy(btn, false);
+      btn.disabled = false;
       toast("Error: " + friendly(ex.message));
     });
   });
