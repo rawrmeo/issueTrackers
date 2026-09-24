@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Issue Tracker</title>
 
+<!-- Apply a saved theme before the first paint so there is no flash.
+     "auto" (the default) leaves the attribute off and the OS decides. -->
+<script>
+  try {
+    var savedTheme = localStorage.getItem("it.theme");
+    if (savedTheme === "light" || savedTheme === "dark") {
+      document.documentElement.setAttribute("data-theme", savedTheme);
+    }
+  } catch (e) {}
+</script>
+
 <!-- Supabase client (CDN — no install, no build step).
      If it can't load, or the keys below are empty, the app runs in a
      local demo mode so you can still try every feature. -->
@@ -56,6 +67,83 @@
       --sidebar: #12151c;
     }
   }
+  /* A manual choice (the theme button, top right) overrides the system
+     preference above. Choosing "auto" removes the attribute, so the media
+     query takes over again. */
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f4f5f8; --surface: #ffffff; --surface-2: #f0f1f4; --border: #e3e5ea;
+    --text: #171a20; --muted: #6b7280; --accent: #4f46e5; --accent-soft: #eef0ff;
+    --done: #15803d; --done-soft: #e7f6ed; --pending: #b45309; --pending-soft: #fdf3e3;
+    --high: #dc2626; --high-soft: #fdeaea; --medium: #b45309; --low: #0e7490;
+    --danger: #dc2626;
+    --shadow: 0 1px 2px rgba(16,20,30,.05), 0 8px 24px rgba(16,20,30,.07);
+    --sidebar: #ffffff;
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0e1016; --surface: #171a22; --surface-2: #1e222c; --border: #2a2f3b;
+    --text: #e8eaf0; --muted: #9aa2b1; --accent: #8b8cf7; --accent-soft: #232544;
+    --done: #4ade80; --done-soft: #14301f; --pending: #fbbf24; --pending-soft: #33260f;
+    --high: #f87171; --high-soft: #35191b; --medium: #fbbf24; --low: #22d3ee;
+    --danger: #f87171;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.35);
+    --sidebar: #12151c;
+  }
+
+  /* ============================ row selection & bulk actions ============================ */
+  .col-status { display: flex; align-items: center; gap: 8px; }
+  .row-check { width: 15px; height: 15px; flex: none; accent-color: var(--accent); cursor: pointer; }
+
+  .bulkbar {
+    display: none; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    border-radius: var(--radius); padding: 10px 14px; margin-bottom: 14px;
+  }
+  .bulkbar.show { display: flex; }
+  .bulkbar .n { font-size: 13px; font-weight: 650; color: var(--accent); }
+  .bulkbar .spacer { flex: 1; min-width: 8px; }
+  .bulkbar select { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 7px 10px; font-size: 13px; }
+
+  /* An issue still open after a while gets a small badge next to its title. */
+  .pill.stale { background: var(--pending-soft); color: var(--pending); text-transform: none; }
+  .issue-title .pill { margin-left: 7px; vertical-align: middle; }
+
+  /* ============================ keyboard shortcut help ============================ */
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; align-items: center; margin: 4px 0 0; }
+  .keys dt { margin: 0; }
+  .keys dd { margin: 0; font-size: 13.5px; color: var(--muted); }
+  kbd {
+    display: inline-block; min-width: 22px; text-align: center; padding: 2px 8px;
+    border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px;
+    background: var(--surface-2); font: 600 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  /* ============================ theme picker (Settings) ============================ */
+  .themepick { display: inline-flex; gap: 3px; background: var(--surface-2); padding: 3px; border-radius: 10px; }
+  .themebtn {
+    border: 0; background: transparent; color: var(--muted);
+    padding: 8px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 550;
+  }
+  .themebtn:hover { color: var(--text); }
+  .themebtn[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.09); }
+
+  /* ============================ repeated issues ============================ */
+  .pill.repeat { background: var(--surface-2); color: var(--muted); text-transform: none; }
+  .repeat-meta { font-size: 11.5px; color: var(--muted); margin: -4px 0 9px; }
+  .bar-fill.repeat-fill { background: var(--pending); }
+
+  /* notifications: a message from an administrator */
+  .notif .ic.note { background: var(--accent-soft); color: var(--accent); }
+
+  /* ============================ admin message to the reporter ============================ */
+  .admin-note {
+    margin-top: 7px; padding: 8px 11px; border-radius: 9px;
+    background: var(--accent-soft); border-left: 3px solid var(--accent);
+    font-size: 12.5px; color: var(--text); word-break: break-word;
+  }
+  .admin-note b { color: var(--accent); font-weight: 650; }
+  .admin-note .when { margin-left: 6px; }
 
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -803,6 +891,13 @@
             </svg>
             Settings
           </button>
+          <button class="menu-item" data-menu="shortcuts">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="6" width="20" height="12" rx="2" />
+              <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" />
+            </svg>
+            Keyboard shortcuts
+          </button>
           <hr />
           <button class="menu-item danger" id="signOutBtn" data-menu="signout">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
@@ -857,7 +952,28 @@
           <option value="medium">Medium</option>
           <option value="low">Low</option>
         </select>
+        <select id="sortBy" aria-label="Sort issues">
+          <option value="status">Sort: status</option>
+          <option value="newest">Sort: newest</option>
+          <option value="oldest">Sort: oldest</option>
+          <option value="priority">Sort: priority</option>
+          <option value="title">Sort: title A&ndash;Z</option>
+        </select>
       </section>
+
+      <div class="bulkbar" id="bulkBar">
+        <span class="n" id="bulkCount">0 selected</span>
+        <button class="btn" type="button" id="bulkSelectAll">Select all</button>
+        <button class="btn" type="button" id="bulkClear">Clear</button>
+        <span class="spacer"></span>
+        <select id="bulkStatus" aria-label="Set status for the selected issues">
+          <option value="pending">Pending</option>
+          <option value="done">Done</option>
+          <option value="none">None</option>
+        </select>
+        <button class="btn primary" type="button" id="bulkApply">Apply status</button>
+        <button class="btn danger" type="button" id="bulkDelete">Delete selected</button>
+      </div>
 
       <div class="table">
         <div class="thead">
@@ -916,6 +1032,12 @@
       <section class="card">
         <h3>Top reporters</h3>
         <div id="byReporter"></div>
+      </section>
+
+      <section class="card">
+        <h3>Most repeated issues</h3>
+        <p class="card-sub">Titles reported more than once &mdash; the same problem coming back.</p>
+        <div id="byRepeated"></div>
       </section>
     </div>
 
@@ -1094,6 +1216,17 @@
           <span class="card-note" id="prefsNote"></span>
         </div>
       </section>
+
+      <section class="card" id="appearanceCard">
+        <h3>Appearance</h3>
+        <p class="card-sub"><b>Night mode</b> is your choice. <b>Auto</b> follows your device's light or dark setting.</p>
+        <div class="themepick" role="group" aria-label="Theme">
+          <button type="button" class="themebtn" data-theme-opt="auto">Auto</button>
+          <button type="button" class="themebtn" data-theme-opt="light">Light</button>
+          <button type="button" class="themebtn" data-theme-opt="dark">Night</button>
+        </div>
+        <p class="card-note" id="themeNote" style="margin-top:10px;"></p>
+      </section>
     </div>
   </main>
 </div>
@@ -1106,6 +1239,7 @@
     <h2 id="modalTitle">Report an issue</h2>
     <form id="issueForm" novalidate>
       <div class="msg error" id="formErr"></div>
+      <div class="msg info" id="lockNote"></div>
       <div class="field">
         <label for="fieldTitle">Title</label>
         <input id="fieldTitle" maxlength="140" placeholder="Short summary of the issue" autocomplete="off" />
@@ -1131,6 +1265,11 @@
             <option value="high">High</option>
           </select>
         </div>
+      </div>
+      <div class="field" id="noteField" hidden>
+        <label for="fieldNote">Message to the reporter <span class="card-note">(optional)</span></label>
+        <textarea id="fieldNote" maxlength="1000" placeholder="e.g. Fixed in the latest update — the login bug was in the password check."></textarea>
+        <div class="hint">The person who reported this issue will see the message. Handy after you mark it Done.</div>
       </div>
       <div class="foot">
         <button type="button" class="btn" id="cancelBtn">Cancel</button>
@@ -1202,6 +1341,25 @@
 </div>
 
 <!-- ==================================================================
+     KEYBOARD SHORTCUTS HELP
+     ================================================================== -->
+<div class="backdrop" id="shortcutsView" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle">
+  <div class="modal">
+    <h2 id="shortcutsTitle">Keyboard shortcuts</h2>
+    <p class="card-sub">These work anywhere in the app, except while you are typing in a field.</p>
+    <dl class="keys">
+      <dt><kbd>/</kbd></dt><dd>Jump to the search box</dd>
+      <dt><kbd>N</kbd></dt><dd>Report a new issue</dd>
+      <dt><kbd>?</kbd></dt><dd>Show or hide this help</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Close any open dialog</dd>
+    </dl>
+    <div class="foot">
+      <button class="btn primary" id="shortcutsClose">Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================================
      DATABASE SCHEMA (shown in the setup panel above)
      ------------------------------------------------------------------
      This is the same SQL as supabase-schema.sql. If you edit one,
@@ -1265,6 +1423,11 @@ alter table public.issues alter column created_by drop not null;
 alter table public.issues drop constraint if exists issues_created_by_fkey;
 alter table public.issues add constraint issues_created_by_fkey
   foreign key (created_by) references auth.users(id) on delete set null;
+
+-- A message an administrator can leave for the reporter after fixing an
+-- issue. Empty by default, so this is safe to add to an existing database.
+alter table public.issues add column if not exists admin_note    text        not null default '';
+alter table public.issues add column if not exists admin_note_at timestamptz not null default 'epoch';
 
 create index if not exists issues_status_idx     on public.issues (status);
 create index if not exists issues_created_by_idx on public.issues (created_by);
@@ -1743,7 +1906,9 @@ create policy issues_delete_admin on public.issues
             createdByName: currentUser.name || "",
             createdByEmail: currentUser.email,
             createdAt: Date.now(),
-            updatedAt: Date.now()
+            updatedAt: Date.now(),
+            adminNote: "",
+            adminNoteAt: 0
           };
           list.push(row);
           write(K_ISSUES, list);
@@ -1959,7 +2124,9 @@ create policy issues_delete_admin on public.issues
             createdByName: "",
             createdByEmail: r.created_by_email || "",
             createdAt: new Date(r.created_at).getTime(),
-            updatedAt: new Date(r.updated_at).getTime()
+            updatedAt: new Date(r.updated_at).getTime(),
+            adminNote: r.admin_note || "",
+            adminNoteAt: r.admin_note_at ? new Date(r.admin_note_at).getTime() : 0
           };
         });
       });
@@ -1980,7 +2147,14 @@ create policy issues_delete_admin on public.issues
     },
 
     updateIssue: function (id, patch) {
-      return sb.from("issues").update(patch).eq("id", id).then(function (res) {
+      // Translate the app's field names into database column names.
+      var row = {};
+      Object.keys(patch).forEach(function (k) {
+        if (k === "adminNote") row.admin_note = patch[k];
+        else if (k === "adminNoteAt") row.admin_note_at = new Date(patch[k]).toISOString();
+        else row[k] = patch[k];
+      });
+      return sb.from("issues").update(row).eq("id", id).then(function (res) {
         if (res.error) throw res.error;
       });
     },
@@ -2097,6 +2271,8 @@ create policy issues_delete_admin on public.issues
   var userQuery     = "";
   var editingId     = null;
   var inRecovery    = false;
+  var sortBy        = "status";   // status | newest | oldest | priority | title
+  var selected      = {};         // id -> true, for the admin bulk actions
   var resetEmail    = "";
 
   /* ==================================================================
@@ -2167,9 +2343,12 @@ create policy issues_delete_admin on public.issues
     priority = "all";
     query = "";
     userQuery = "";
+    sortBy = "status";
+    selected = {};
     el("search").value = "";
     el("userSearch").value = "";
     el("priorityFilter").value = "all";
+    el("sortBy").value = "status";
 
     render();
     refresh();
@@ -2234,6 +2413,71 @@ create policy issues_delete_admin on public.issues
     return issues;
   }
 
+  /* How many whole days an issue has been open (0 if the date is unknown). */
+  function openDays(it) {
+    if (!it || !it.createdAt) return 0;
+    return Math.floor((Date.now() - it.createdAt) / 86400000);
+  }
+
+  /* An issue that is not done and has been open a week or more. */
+  var STALE_DAYS = 7;
+  function isStale(it) {
+    return it.status !== "done" && openDays(it) >= STALE_DAYS;
+  }
+
+  /* The toolbar's "Sort" dropdown decides the order. The default keeps the
+     original behaviour: pending first, then unset, then done, newest wins. */
+  var PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+  function compareIssues(a, b) {
+    if (sortBy === "newest") return (b.createdAt || 0) - (a.createdAt || 0);
+    if (sortBy === "oldest") return (a.createdAt || 0) - (b.createdAt || 0);
+    if (sortBy === "title")  return String(a.title || "").localeCompare(String(b.title || ""));
+    if (sortBy === "priority") {
+      var pa = PRIORITY_ORDER[a.priority], pb = PRIORITY_ORDER[b.priority];
+      if (pa === undefined) pa = 1;
+      if (pb === undefined) pb = 1;
+      if (pa !== pb) return pa - pb;
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    }
+    var order = { pending: 0, none: 1, done: 2 };
+    var oa = order[a.status], ob = order[b.status];
+    if (oa === undefined) oa = 1;
+    if (ob === undefined) ob = 1;
+    if (oa !== ob) return oa - ob;
+    return (b.updatedAt || 0) - (a.updatedAt || 0);
+  }
+
+  /* ----------------------------------------------------------------
+     REPEATED ISSUES
+     Group issues whose titles match once case, spacing and punctuation
+     are ignored ("Login fails!" == "login fails"). Admins use this to
+     spot the same problem being reported again and again.
+     ---------------------------------------------------------------- */
+  var repeatIndex = {};
+
+  function normTitle(t) {
+    return String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  }
+
+  function buildRepeatIndex() {
+    var map = {};
+    issues.forEach(function (it) {
+      var k = normTitle(it.title);
+      if (!k) return;
+      (map[k] = map[k] || []).push(it);
+    });
+    return map;
+  }
+
+  function repeatGroups() {
+    var map = buildRepeatIndex();
+    return Object.keys(map).map(function (k) { return map[k]; })
+      .filter(function (g) { return g.length > 1; })
+      .sort(function (a, b) {
+        return b.length - a.length || (b[0].updatedAt || 0) - (a[0].updatedAt || 0);
+      });
+  }
+
   function visibleIssues() {
     var q = query.trim().toLowerCase();
     return baseIssues()
@@ -2244,15 +2488,7 @@ create policy issues_delete_admin on public.issues
         return (it.title + " " + (it.description || "") + " " + (it.createdByEmail || ""))
           .toLowerCase().indexOf(q) !== -1;
       })
-      .sort(function (a, b) {
-        // Pending first, then unset, then done. Newest update wins inside a group.
-        var order = { pending: 0, none: 1, done: 2 };
-        var oa = order[a.status], ob = order[b.status];
-        if (oa === undefined) oa = 1;
-        if (ob === undefined) ob = 1;
-        if (oa !== ob) return oa - ob;
-        return b.updatedAt - a.updatedAt;
-      });
+      .sort(compareIssues);
   }
 
   function updateStats() {
@@ -2284,8 +2520,28 @@ create policy issues_delete_admin on public.issues
 
   function render() {
     updateStats();
+    repeatIndex = buildRepeatIndex();
     var items = visibleIssues();
     listEl.innerHTML = items.length ? items.map(row).join("") : emptyState(baseIssues().length);
+    updateBulkBar();
+  }
+
+  /* The admin bulk-action bar. It only appears once at least one row is
+     selected, and it never shows for normal users. Stale ids (from rows that
+     have since disappeared) are dropped here. */
+  function updateBulkBar() {
+    var bar = el("bulkBar");
+    if (!bar) return;
+    if (!isAdmin()) { bar.classList.remove("show"); return; }
+
+    var live = Object.keys(selected).filter(function (id) { return Boolean(byId(id)); });
+    if (live.length !== Object.keys(selected).length) {
+      selected = {};
+      live.forEach(function (id) { selected[id] = true; });
+    }
+
+    el("bulkCount").textContent = live.length + " selected";
+    bar.classList.toggle("show", live.length > 0);
   }
 
   /* A status dropdown when the user may change it, otherwise a locked badge. */
@@ -2307,6 +2563,29 @@ create policy issues_delete_admin on public.issues
     var isDone = it.status === "done";
     var reporter = it.createdByEmail || it.createdByName || "unknown";
 
+    /* Admins get a checkbox for the bulk actions above the table. */
+    var check = can("manageUsers")
+      ? '<input type="checkbox" class="row-check" data-action="select" value="' + esc(it.id) + '"' +
+          (selected[it.id] ? " checked" : "") + ' aria-label="Select this issue" />'
+      : "";
+
+    /* Flag issues that have been sitting open for a while. */
+    var stale = isStale(it)
+      ? '<span class="pill stale" title="Open for ' + openDays(it) + ' days">Open ' + openDays(it) + 'd</span>'
+      : "";
+
+    /* Admins see how often this title has been reported before. */
+    var repeats = can("manageUsers") ? (repeatIndex[normTitle(it.title)] || []).length : 0;
+    var repeatBadge = repeats > 1
+      ? '<span class="pill repeat" title="This title has been reported ' + repeats + ' times">\u00d7' + repeats + ' repeated</span>'
+      : "";
+
+    /* A message from an admin is shown to the reporter and to other admins. */
+    var adminNote = (it.adminNote && (isMine(it) || isAdmin()))
+      ? '<div class="admin-note"><b>Message from admin:</b> ' + esc(it.adminNote) +
+          (it.adminNoteAt ? '<span class="when">' + timeAgo(it.adminNoteAt) + '</span>' : "") + '</div>'
+      : "";
+
     var actions =
       (can("edit")
         ? '<button class="btn ghost icon" data-action="edit" title="Edit issue" aria-label="Edit issue">' +
@@ -2321,10 +2600,11 @@ create policy issues_delete_admin on public.issues
       '<span class="when">—</span>';
 
     return '<div class="row' + (isDone ? " is-done" : "") + '" data-id="' + esc(it.id) + '">' +
-      '<div class="col-status">' + statusControl(it) + '</div>' +
+      '<div class="col-status">' + check + statusControl(it) + '</div>' +
       '<div>' +
-        '<div class="issue-title">' + esc(it.title) + '</div>' +
+        '<div class="issue-title">' + esc(it.title) + stale + repeatBadge + '</div>' +
         (it.description ? '<div class="issue-desc">' + esc(it.description) + '</div>' : "") +
+        adminNote +
       '</div>' +
       '<div><span class="pill ' + esc(it.priority) + '">' + esc(it.priority) + '</span></div>' +
       '<div class="reporter"><span class="owner">' + esc(reporter) + '</span></div>' +
@@ -2388,6 +2668,12 @@ create policy issues_delete_admin on public.issues
     var action = actionEl.dataset.action;
 
     if (action === "new") { openModal(null); return; }
+    if (action === "select") {
+      if (actionEl.checked) selected[actionEl.value] = true;
+      else delete selected[actionEl.value];
+      updateBulkBar();
+      return;
+    }
     if (action === "clear-filters") {
       filter = "all"; priority = "all"; query = "";
       el("search").value = ""; el("priorityFilter").value = "all";
@@ -2438,6 +2724,44 @@ create policy issues_delete_admin on public.issues
   });
   el("search").addEventListener("input", function (e) { query = e.target.value; render(); });
   el("priorityFilter").addEventListener("change", function (e) { priority = e.target.value; render(); });
+  el("sortBy").addEventListener("change", function (e) { sortBy = e.target.value; render(); });
+
+  /* ---- admin bulk actions ---- */
+  function selectedIds() {
+    return Object.keys(selected).filter(function (id) { return Boolean(byId(id)); });
+  }
+
+  el("bulkSelectAll").addEventListener("click", function () {
+    visibleIssues().forEach(function (it) { selected[it.id] = true; });
+    render();
+  });
+
+  el("bulkClear").addEventListener("click", function () {
+    selected = {};
+    render();
+  });
+
+  el("bulkApply").addEventListener("click", function () {
+    var ids = selectedIds();
+    if (!ids.length) return;
+    var next = el("bulkStatus").value;
+    selected = {};
+    mutate(
+      Promise.all(ids.map(function (id) { return api.updateIssue(id, { status: next }); })),
+      ids.length + " issue(s) set to " + statusLabel(next)
+    );
+  });
+
+  el("bulkDelete").addEventListener("click", function () {
+    var ids = selectedIds();
+    if (!ids.length) return;
+    if (!confirm("Delete " + ids.length + " selected issue(s)?\nThis cannot be undone.")) return;
+    selected = {};
+    mutate(
+      Promise.all(ids.map(function (id) { return api.deleteIssue(id); })),
+      ids.length + " issue(s) deleted"
+    );
+  });
 
   document.querySelectorAll(".nav-item").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -2455,6 +2779,7 @@ create policy issues_delete_admin on public.issues
   var fDesc = el("fieldDesc");
   var fStatus = el("fieldStatus");
   var fPriority = el("fieldPriority");
+  var fNote = el("fieldNote");
   var formErr = el("formErr");
 
   function openModal(issue) {
@@ -2470,8 +2795,30 @@ create policy issues_delete_admin on public.issues
     fStatus.value = issue ? issue.status : "none";
     fPriority.value = issue ? issue.priority : "medium";
 
-    var lockDetails = Boolean(issue) && !can("edit");
-    [fTitle, fDesc, fPriority].forEach(function (f) { f.disabled = lockDetails; });
+    // Only the reporter's own words are editable. Anyone else (including an
+    // administrator) may set the status and leave a message, but the title,
+    // description and priority are kept exactly as the reporter wrote them.
+    // Once an issue has been reported, its title and description stay exactly
+    // as the reporter wrote them — nobody rewrites someone else's report. The
+    // status and priority are still managed by an administrator, who can also
+    // leave a message for the reporter.
+    var isExisting = Boolean(issue);
+    [fTitle, fDesc].forEach(function (f) { f.disabled = isExisting; });
+
+    if (isExisting && can("edit")) {
+      showMsg(el("lockNote"),
+        "Reported by " + (issue.createdByEmail || "another user") + ". The title and " +
+        "description are kept as they were written \u2014 you can set the status, the " +
+        "priority, and leave a message below.", "info");
+    } else {
+      showMsg(el("lockNote"), "");
+    }
+
+    // The "message to the reporter" box is for administrators on an existing
+    // issue — on a brand-new issue there is nobody to message yet.
+    el("noteField").hidden = !can("edit") || !isExisting;
+    fNote.value = isExisting ? (issue.adminNote || "") : "";
+    fNote.disabled = false;
 
     // Hide the status control from anyone who cannot use it.
     el("statusField").hidden = !canPickStatus;
@@ -2481,7 +2828,7 @@ create policy issues_delete_admin on public.issues
     backdrop.classList.add("open");
     document.body.style.overflow = "hidden";
     setTimeout(function () {
-      if (lockDetails && canPickStatus) fStatus.focus(); else fTitle.focus();
+      if (isExisting && canPickStatus) fStatus.focus(); else fTitle.focus();
     }, 30);
   }
 
@@ -2489,7 +2836,8 @@ create policy issues_delete_admin on public.issues
     backdrop.classList.remove("open");
     document.body.style.overflow = "";
     editingId = null;
-    [fTitle, fDesc, fStatus, fPriority].forEach(function (f) { f.disabled = false; });
+    [fTitle, fDesc, fStatus, fPriority, fNote].forEach(function (f) { f.disabled = false; });
+    showMsg(el("lockNote"), "");
   }
 
   el("newBtn").addEventListener("click", function () { openModal(null); });
@@ -2499,6 +2847,7 @@ create policy issues_delete_admin on public.issues
     if (e.key !== "Escape") return;
     if (backdrop.classList.contains("open")) closeModal();
     if (el("setupView").classList.contains("open")) el("setupView").classList.remove("open");
+    if (el("shortcutsView").classList.contains("open")) closeShortcuts();
     if (el("userBackdrop").classList.contains("open")) closeUserModal();
     closeMenu();
   });
@@ -2506,16 +2855,18 @@ create policy issues_delete_admin on public.issues
   el("issueForm").addEventListener("submit", function (e) {
     e.preventDefault();
 
-    var lockDetails = Boolean(editingId) && !can("edit");
-    if (!editingId && !can("create")) { showMsg(formErr, "You don't have permission to report issues."); return; }
-    if (editingId && !lockDetails && !can("edit")) { showMsg(formErr, "Only an administrator can edit issue details."); return; }
+    var isExisting = Boolean(editingId);
+    if (!isExisting && !can("create")) { showMsg(formErr, "You don't have permission to report issues."); return; }
+    if (isExisting && !can("edit")) { showMsg(formErr, "Only an administrator can open an issue."); return; }
 
     var title = fTitle.value.trim();
-    if (!lockDetails && !title) { showMsg(formErr, "Please enter a title."); fTitle.focus(); return; }
+    if (!isExisting && !title) { showMsg(formErr, "Please enter a title."); fTitle.focus(); return; }
     showMsg(formErr, "");
 
-    var payload = lockDetails
-      ? { status: fStatus.value }
+    // An existing report keeps the reporter's title and description; the admin
+    // manages the status and priority and may leave a message below.
+    var payload = isExisting
+      ? { status: fStatus.value, priority: fPriority.value }
       : {
           title: title,
           description: fDesc.value.trim(),
@@ -2523,6 +2874,18 @@ create policy issues_delete_admin on public.issues
           status: can("setStatus") ? fStatus.value : "none",
           priority: fPriority.value
         };
+
+    // Administrators can attach a message for the reporter. It is only sent
+    // when it actually changed, so a database that predates the column still
+    // works for ordinary edits.
+    if (can("edit") && !el("noteField").hidden) {
+      var note = fNote.value.trim();
+      var prevNote = (editingId && byId(editingId)) ? (byId(editingId).adminNote || "") : "";
+      if (note !== prevNote) {
+        payload.adminNote = note;
+        payload.adminNoteAt = Date.now();
+      }
+    }
 
     var btn = el("saveBtn");
     busy(btn, true, "Saving…");
@@ -3034,6 +3397,8 @@ create policy issues_delete_admin on public.issues
     topKeys.forEach(function (k) { top[k] = reporters[k]; });
     el("byReporter").innerHTML = barList(top, s.total);
 
+    el("byRepeated").innerHTML = repeatBarList(8);
+
     // Issues reported on each of the last 14 days.
     var today = new Date(); today.setHours(0, 0, 0, 0);
     var series = [];
@@ -3091,6 +3456,26 @@ create policy issues_delete_admin on public.issues
     return '<table class="report-table"><tbody>' + rows.map(function (r) {
       return '<tr><th style="width:70%">' + esc(r[0]) + '</th><td class="num">' + esc(String(r[1])) + '</td></tr>';
     }).join("") + '</tbody></table><div style="height:20px"></div>';
+  }
+
+  /* The Statistics screen shows repeated issues as a bar list, the same
+     shape as "Top reporters" above it. */
+  function repeatBarList(limit) {
+    var groups = repeatGroups().slice(0, limit || 8);
+    if (!groups.length) return '<p class="card-note">No repeated issues right now.</p>';
+
+    var max = groups[0].length || 1;
+    return groups.map(function (g) {
+      var pct = Math.round(g.length / max * 100);
+      var open = g.filter(function (i) { return i.status !== "done"; }).length;
+      var label = g[0].title;
+      return '<div class="bar-row" title="' + esc(label) + '">' +
+        '<span class="bar-label">' + esc(label) + '</span>' +
+        '<span class="bar-track"><span class="bar-fill repeat-fill" style="width:' + pct + '%"></span></span>' +
+        '<span class="bar-num">' + g.length + '</span>' +
+      '</div>' +
+      '<div class="repeat-meta">' + open + ' still open</div>';
+    }).join("");
   }
 
   function renderReport() {
@@ -3256,9 +3641,98 @@ create policy issues_delete_admin on public.issues
     else if (what === "mine") setView("mine");
     else if (what === "notifications") setView("notifications");
     else if (what === "prefs") setView("prefs");
+    else if (what === "shortcuts") openShortcuts();
   });
 
   el("bellBtn").addEventListener("click", function () { setView("notifications"); });
+
+  /* ==================================================================
+     THEME — Auto / Light / Dark, remembered per browser
+     ================================================================== */
+  var THEME_KEY = "it.theme";
+
+  function currentTheme() {
+    try {
+      var t = localStorage.getItem(THEME_KEY);
+      return (t === "light" || t === "dark") ? t : "auto";
+    } catch (e) { return "auto"; }
+  }
+
+  function applyTheme(mode) {
+    if (mode === "light" || mode === "dark") {
+      document.documentElement.setAttribute("data-theme", mode);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    try {
+      if (mode === "auto") localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, mode);
+    } catch (e) {}
+
+    syncThemeUI();
+  }
+
+  /* Keep the Settings buttons and the top-bar button showing the same mode. */
+  function themeLabel(mode) { return mode.charAt(0).toUpperCase() + mode.slice(1); }
+
+  function syncThemeUI() {
+    var mode = currentTheme();
+    document.querySelectorAll(".themebtn").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.themeOpt === mode));
+    });
+    var note = el("themeNote");
+    if (note) {
+      note.textContent = mode === "auto"
+        ? "Currently following your device."
+        : "Currently " + (mode === "dark" ? "Night" : "Light") + " mode.";
+    }
+  }
+
+  document.querySelectorAll(".themebtn").forEach(function (b) {
+    b.addEventListener("click", function () {
+      applyTheme(b.dataset.themeOpt);
+      toast("Theme: " + themeLabel(b.dataset.themeOpt));
+    });
+  });
+
+  applyTheme(currentTheme());
+
+  /* ==================================================================
+     KEYBOARD SHORTCUTS
+     ================================================================== */
+  function openShortcuts() { el("shortcutsView").classList.add("open"); }
+  function closeShortcuts() { el("shortcutsView").classList.remove("open"); }
+  function toggleShortcuts() {
+    if (el("shortcutsView").classList.contains("open")) closeShortcuts();
+    else openShortcuts();
+  }
+
+  el("shortcutsClose").addEventListener("click", closeShortcuts);
+  el("shortcutsView").addEventListener("mousedown", function (e) {
+    if (e.target === el("shortcutsView")) closeShortcuts();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    var tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select" || e.target.isContentEditable) return;
+
+    if (e.key === "/") {
+      if (el("appView").hidden) return;
+      e.preventDefault();
+      if (view !== "board" && view !== "mine") setView("board");
+      el("search").focus();
+      el("search").select();
+    } else if (e.key === "n" || e.key === "N") {
+      if (el("appView").hidden || !can("create")) return;
+      e.preventDefault();
+      openModal(null);
+    } else if (e.key === "?") {
+      if (el("appView").hidden) return;
+      e.preventDefault();
+      toggleShortcuts();
+    }
+  });
 
   /* ==================================================================
      NOTIFICATIONS — derived from issue activity, filtered by preference
@@ -3282,6 +3756,16 @@ create policy issues_delete_admin on public.issues
       }
       if (prefs.highPriority !== false && it.priority === "high" && it.status !== "done" && it.createdAt) {
         out.push({ kind: "high", at: it.createdAt, title: "Open high-priority issue", body: it.title });
+      }
+
+      // A message an administrator left on an issue. Shown to the person who
+      // reported it, and to other administrators.
+      if (it.adminNote && it.adminNoteAt && (mine || isAdmin())) {
+        out.push({
+          kind: "note", at: it.adminNoteAt,
+          title: "Message from an administrator",
+          body: it.title + " \u2014 " + it.adminNote
+        });
       }
     });
 
@@ -3312,7 +3796,8 @@ create policy issues_delete_admin on public.issues
     created: '<path d="M12 5v14M5 12h14"/>',
     done:    '<path d="M5 13l4 4L19 7"/>',
     high:    '<path d="M12 9v4M12 17h.01"/>' +
-             '<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
+             '<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+    note:    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
   };
 
   function renderNotifications() {
@@ -3376,6 +3861,7 @@ create policy issues_delete_admin on public.issues
     el("prefDone").checked = p.statusDone !== false;
     el("prefHigh").checked = p.highPriority !== false;
     el("prefsNote").textContent = "";
+    syncThemeUI();
   }
 
   function savePrefs() {

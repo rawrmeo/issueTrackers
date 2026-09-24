@@ -69,6 +69,11 @@ alter table public.issues drop constraint if exists issues_created_by_fkey;
 alter table public.issues add constraint issues_created_by_fkey
   foreign key (created_by) references auth.users(id) on delete set null;
 
+-- A message an administrator can leave for the reporter after fixing an
+-- issue. Empty by default, so this is safe to add to an existing database.
+alter table public.issues add column if not exists admin_note    text        not null default '';
+alter table public.issues add column if not exists admin_note_at timestamptz not null default 'epoch';
+
 create index if not exists issues_status_idx     on public.issues (status);
 create index if not exists issues_created_by_idx on public.issues (created_by);
 create index if not exists issues_updated_at_idx on public.issues (updated_at desc);
