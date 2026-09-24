@@ -141,6 +141,37 @@ Either way, if you are using Supabase, add the live URL to Supabase's
 - **Edit / delete** — the two icons on the right of a row, admins only.
 - **Log out** — the button in the sidebar, under your name.
 
+### Sorting
+
+The **Sort** dropdown beside the priority filter changes the order of the
+list: **status** (the default — Pending, then None, then Done), **newest**,
+**oldest**, **priority** (High first) or **title (A–Z)**.
+
+### Stale issues
+
+An issue that is still open (not Done) after **7 days** gets a small
+**Open _n_ d** badge next to its title, so the oldest work is easy to spot.
+
+### Bulk actions (admins)
+
+Admins see a checkbox on every row. Tick one or more rows, or press
+**Select all**, and a bar appears above the table where you can
+**Apply status** (Pending / Done / None) or **Delete selected** in one go.
+
+### Theme
+
+The button to the left of the bell cycles **Auto → Light → Dark**. **Auto**
+follows your operating system; the choice is remembered in this browser.
+
+### Keyboard shortcuts
+
+| Key | Action |
+| --- | --- |
+| <kbd>/</kbd> | Jump to the search box |
+| <kbd>N</kbd> | Report a new issue |
+| <kbd>?</kbd> | Show or hide the shortcut help |
+| <kbd>Esc</kbd> | Close any open dialog |
+
 ---
 
 ## Notifications

@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Issue Tracker</title>
 
+<!-- Apply a saved theme before the first paint so there is no flash.
+     "auto" (the default) leaves the attribute off and the OS decides. -->
+<script>
+  try {
+    var savedTheme = localStorage.getItem("it.theme");
+    if (savedTheme === "light" || savedTheme === "dark") {
+      document.documentElement.setAttribute("data-theme", savedTheme);
+    }
+  } catch (e) {}
+</script>
+
 <!-- Supabase client (CDN — no install, no build step).
      If it can't load, or the keys below are empty, the app runs in a
      local demo mode so you can still try every feature. -->
@@ -55,6 +66,57 @@
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.35);
       --sidebar: #12151c;
     }
+  }
+  /* A manual choice (the theme button, top right) overrides the system
+     preference above. Choosing "auto" removes the attribute, so the media
+     query takes over again. */
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f4f5f8; --surface: #ffffff; --surface-2: #f0f1f4; --border: #e3e5ea;
+    --text: #171a20; --muted: #6b7280; --accent: #4f46e5; --accent-soft: #eef0ff;
+    --done: #15803d; --done-soft: #e7f6ed; --pending: #b45309; --pending-soft: #fdf3e3;
+    --high: #dc2626; --high-soft: #fdeaea; --medium: #b45309; --low: #0e7490;
+    --danger: #dc2626;
+    --shadow: 0 1px 2px rgba(16,20,30,.05), 0 8px 24px rgba(16,20,30,.07);
+    --sidebar: #ffffff;
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0e1016; --surface: #171a22; --surface-2: #1e222c; --border: #2a2f3b;
+    --text: #e8eaf0; --muted: #9aa2b1; --accent: #8b8cf7; --accent-soft: #232544;
+    --done: #4ade80; --done-soft: #14301f; --pending: #fbbf24; --pending-soft: #33260f;
+    --high: #f87171; --high-soft: #35191b; --medium: #fbbf24; --low: #22d3ee;
+    --danger: #f87171;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.35);
+    --sidebar: #12151c;
+  }
+
+  /* ============================ row selection & bulk actions ============================ */
+  .col-status { display: flex; align-items: center; gap: 8px; }
+  .row-check { width: 15px; height: 15px; flex: none; accent-color: var(--accent); cursor: pointer; }
+
+  .bulkbar {
+    display: none; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    border-radius: var(--radius); padding: 10px 14px; margin-bottom: 14px;
+  }
+  .bulkbar.show { display: flex; }
+  .bulkbar .n { font-size: 13px; font-weight: 650; color: var(--accent); }
+  .bulkbar .spacer { flex: 1; min-width: 8px; }
+  .bulkbar select { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 7px 10px; font-size: 13px; }
+
+  /* An issue still open after a while gets a small badge next to its title. */
+  .pill.stale { background: var(--pending-soft); color: var(--pending); text-transform: none; }
+  .issue-title .pill { margin-left: 7px; vertical-align: middle; }
+
+  /* ============================ keyboard shortcut help ============================ */
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; align-items: center; margin: 4px 0 0; }
+  .keys dt { margin: 0; }
+  .keys dd { margin: 0; font-size: 13.5px; color: var(--muted); }
+  kbd {
+    display: inline-block; min-width: 22px; text-align: center; padding: 2px 8px;
+    border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px;
+    background: var(--surface-2); font: 600 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   * { box-sizing: border-box; }
@@ -749,6 +811,11 @@
   <main class="main">
     <!-- top bar: notifications + profile menu -->
     <div class="topbar">
+      <button class="icon-btn" id="themeBtn" aria-label="Colour theme: auto" title="Theme: Auto">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" />
+        </svg>
+      </button>
       <button class="icon-btn" id="bellBtn" aria-label="Notifications" title="Notifications">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -802,6 +869,13 @@
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 7.26 19.6l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.26 14H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.74l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 10 4.6V4a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 2.74 1.17l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 10H20a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
             Settings
+          </button>
+          <button class="menu-item" data-menu="shortcuts">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="6" width="20" height="12" rx="2" />
+              <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" />
+            </svg>
+            Keyboard shortcuts
           </button>
           <hr />
           <button class="menu-item danger" id="signOutBtn" data-menu="signout">
@@ -857,7 +931,28 @@
           <option value="medium">Medium</option>
           <option value="low">Low</option>
         </select>
+        <select id="sortBy" aria-label="Sort issues">
+          <option value="status">Sort: status</option>
+          <option value="newest">Sort: newest</option>
+          <option value="oldest">Sort: oldest</option>
+          <option value="priority">Sort: priority</option>
+          <option value="title">Sort: title A&ndash;Z</option>
+        </select>
       </section>
+
+      <div class="bulkbar" id="bulkBar">
+        <span class="n" id="bulkCount">0 selected</span>
+        <button class="btn" type="button" id="bulkSelectAll">Select all</button>
+        <button class="btn" type="button" id="bulkClear">Clear</button>
+        <span class="spacer"></span>
+        <select id="bulkStatus" aria-label="Set status for the selected issues">
+          <option value="pending">Pending</option>
+          <option value="done">Done</option>
+          <option value="none">None</option>
+        </select>
+        <button class="btn primary" type="button" id="bulkApply">Apply status</button>
+        <button class="btn danger" type="button" id="bulkDelete">Delete selected</button>
+      </div>
 
       <div class="table">
         <div class="thead">
@@ -1197,6 +1292,25 @@
     <div class="foot">
       <button class="btn" id="copySqlBtn">Copy SQL</button>
       <button class="btn primary" id="setupClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================================
+     KEYBOARD SHORTCUTS HELP
+     ================================================================== -->
+<div class="backdrop" id="shortcutsView" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle">
+  <div class="modal">
+    <h2 id="shortcutsTitle">Keyboard shortcuts</h2>
+    <p class="card-sub">These work anywhere in the app, except while you are typing in a field.</p>
+    <dl class="keys">
+      <dt><kbd>/</kbd></dt><dd>Jump to the search box</dd>
+      <dt><kbd>N</kbd></dt><dd>Report a new issue</dd>
+      <dt><kbd>?</kbd></dt><dd>Show or hide this help</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Close any open dialog</dd>
+    </dl>
+    <div class="foot">
+      <button class="btn primary" id="shortcutsClose">Got it</button>
     </div>
   </div>
 </div>
@@ -2097,6 +2211,8 @@ create policy issues_delete_admin on public.issues
   var userQuery     = "";
   var editingId     = null;
   var inRecovery    = false;
+  var sortBy        = "status";   // status | newest | oldest | priority | title
+  var selected      = {};         // id -> true, for the admin bulk actions
   var resetEmail    = "";
 
   /* ==================================================================
@@ -2167,9 +2283,12 @@ create policy issues_delete_admin on public.issues
     priority = "all";
     query = "";
     userQuery = "";
+    sortBy = "status";
+    selected = {};
     el("search").value = "";
     el("userSearch").value = "";
     el("priorityFilter").value = "all";
+    el("sortBy").value = "status";
 
     render();
     refresh();
@@ -2234,6 +2353,40 @@ create policy issues_delete_admin on public.issues
     return issues;
   }
 
+  /* How many whole days an issue has been open (0 if the date is unknown). */
+  function openDays(it) {
+    if (!it || !it.createdAt) return 0;
+    return Math.floor((Date.now() - it.createdAt) / 86400000);
+  }
+
+  /* An issue that is not done and has been open a week or more. */
+  var STALE_DAYS = 7;
+  function isStale(it) {
+    return it.status !== "done" && openDays(it) >= STALE_DAYS;
+  }
+
+  /* The toolbar's "Sort" dropdown decides the order. The default keeps the
+     original behaviour: pending first, then unset, then done, newest wins. */
+  var PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+  function compareIssues(a, b) {
+    if (sortBy === "newest") return (b.createdAt || 0) - (a.createdAt || 0);
+    if (sortBy === "oldest") return (a.createdAt || 0) - (b.createdAt || 0);
+    if (sortBy === "title")  return String(a.title || "").localeCompare(String(b.title || ""));
+    if (sortBy === "priority") {
+      var pa = PRIORITY_ORDER[a.priority], pb = PRIORITY_ORDER[b.priority];
+      if (pa === undefined) pa = 1;
+      if (pb === undefined) pb = 1;
+      if (pa !== pb) return pa - pb;
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    }
+    var order = { pending: 0, none: 1, done: 2 };
+    var oa = order[a.status], ob = order[b.status];
+    if (oa === undefined) oa = 1;
+    if (ob === undefined) ob = 1;
+    if (oa !== ob) return oa - ob;
+    return (b.updatedAt || 0) - (a.updatedAt || 0);
+  }
+
   function visibleIssues() {
     var q = query.trim().toLowerCase();
     return baseIssues()
@@ -2244,15 +2397,7 @@ create policy issues_delete_admin on public.issues
         return (it.title + " " + (it.description || "") + " " + (it.createdByEmail || ""))
           .toLowerCase().indexOf(q) !== -1;
       })
-      .sort(function (a, b) {
-        // Pending first, then unset, then done. Newest update wins inside a group.
-        var order = { pending: 0, none: 1, done: 2 };
-        var oa = order[a.status], ob = order[b.status];
-        if (oa === undefined) oa = 1;
-        if (ob === undefined) ob = 1;
-        if (oa !== ob) return oa - ob;
-        return b.updatedAt - a.updatedAt;
-      });
+      .sort(compareIssues);
   }
 
   function updateStats() {
@@ -2286,6 +2431,25 @@ create policy issues_delete_admin on public.issues
     updateStats();
     var items = visibleIssues();
     listEl.innerHTML = items.length ? items.map(row).join("") : emptyState(baseIssues().length);
+    updateBulkBar();
+  }
+
+  /* The admin bulk-action bar. It only appears once at least one row is
+     selected, and it never shows for normal users. Stale ids (from rows that
+     have since disappeared) are dropped here. */
+  function updateBulkBar() {
+    var bar = el("bulkBar");
+    if (!bar) return;
+    if (!isAdmin()) { bar.classList.remove("show"); return; }
+
+    var live = Object.keys(selected).filter(function (id) { return Boolean(byId(id)); });
+    if (live.length !== Object.keys(selected).length) {
+      selected = {};
+      live.forEach(function (id) { selected[id] = true; });
+    }
+
+    el("bulkCount").textContent = live.length + " selected";
+    bar.classList.toggle("show", live.length > 0);
   }
 
   /* A status dropdown when the user may change it, otherwise a locked badge. */
@@ -2307,6 +2471,17 @@ create policy issues_delete_admin on public.issues
     var isDone = it.status === "done";
     var reporter = it.createdByEmail || it.createdByName || "unknown";
 
+    /* Admins get a checkbox for the bulk actions above the table. */
+    var check = can("manageUsers")
+      ? '<input type="checkbox" class="row-check" data-action="select" value="' + esc(it.id) + '"' +
+          (selected[it.id] ? " checked" : "") + ' aria-label="Select this issue" />'
+      : "";
+
+    /* Flag issues that have been sitting open for a while. */
+    var stale = isStale(it)
+      ? '<span class="pill stale" title="Open for ' + openDays(it) + ' days">Open ' + openDays(it) + 'd</span>'
+      : "";
+
     var actions =
       (can("edit")
         ? '<button class="btn ghost icon" data-action="edit" title="Edit issue" aria-label="Edit issue">' +
@@ -2321,9 +2496,9 @@ create policy issues_delete_admin on public.issues
       '<span class="when">—</span>';
 
     return '<div class="row' + (isDone ? " is-done" : "") + '" data-id="' + esc(it.id) + '">' +
-      '<div class="col-status">' + statusControl(it) + '</div>' +
+      '<div class="col-status">' + check + statusControl(it) + '</div>' +
       '<div>' +
-        '<div class="issue-title">' + esc(it.title) + '</div>' +
+        '<div class="issue-title">' + esc(it.title) + stale + '</div>' +
         (it.description ? '<div class="issue-desc">' + esc(it.description) + '</div>' : "") +
       '</div>' +
       '<div><span class="pill ' + esc(it.priority) + '">' + esc(it.priority) + '</span></div>' +
@@ -2388,6 +2563,12 @@ create policy issues_delete_admin on public.issues
     var action = actionEl.dataset.action;
 
     if (action === "new") { openModal(null); return; }
+    if (action === "select") {
+      if (actionEl.checked) selected[actionEl.value] = true;
+      else delete selected[actionEl.value];
+      updateBulkBar();
+      return;
+    }
     if (action === "clear-filters") {
       filter = "all"; priority = "all"; query = "";
       el("search").value = ""; el("priorityFilter").value = "all";
@@ -2438,6 +2619,44 @@ create policy issues_delete_admin on public.issues
   });
   el("search").addEventListener("input", function (e) { query = e.target.value; render(); });
   el("priorityFilter").addEventListener("change", function (e) { priority = e.target.value; render(); });
+  el("sortBy").addEventListener("change", function (e) { sortBy = e.target.value; render(); });
+
+  /* ---- admin bulk actions ---- */
+  function selectedIds() {
+    return Object.keys(selected).filter(function (id) { return Boolean(byId(id)); });
+  }
+
+  el("bulkSelectAll").addEventListener("click", function () {
+    visibleIssues().forEach(function (it) { selected[it.id] = true; });
+    render();
+  });
+
+  el("bulkClear").addEventListener("click", function () {
+    selected = {};
+    render();
+  });
+
+  el("bulkApply").addEventListener("click", function () {
+    var ids = selectedIds();
+    if (!ids.length) return;
+    var next = el("bulkStatus").value;
+    selected = {};
+    mutate(
+      Promise.all(ids.map(function (id) { return api.updateIssue(id, { status: next }); })),
+      ids.length + " issue(s) set to " + statusLabel(next)
+    );
+  });
+
+  el("bulkDelete").addEventListener("click", function () {
+    var ids = selectedIds();
+    if (!ids.length) return;
+    if (!confirm("Delete " + ids.length + " selected issue(s)?\nThis cannot be undone.")) return;
+    selected = {};
+    mutate(
+      Promise.all(ids.map(function (id) { return api.deleteIssue(id); })),
+      ids.length + " issue(s) deleted"
+    );
+  });
 
   document.querySelectorAll(".nav-item").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -2499,6 +2718,7 @@ create policy issues_delete_admin on public.issues
     if (e.key !== "Escape") return;
     if (backdrop.classList.contains("open")) closeModal();
     if (el("setupView").classList.contains("open")) el("setupView").classList.remove("open");
+    if (el("shortcutsView").classList.contains("open")) closeShortcuts();
     if (el("userBackdrop").classList.contains("open")) closeUserModal();
     closeMenu();
   });
@@ -3256,9 +3476,95 @@ create policy issues_delete_admin on public.issues
     else if (what === "mine") setView("mine");
     else if (what === "notifications") setView("notifications");
     else if (what === "prefs") setView("prefs");
+    else if (what === "shortcuts") openShortcuts();
   });
 
   el("bellBtn").addEventListener("click", function () { setView("notifications"); });
+
+  /* ==================================================================
+     THEME — Auto / Light / Dark, remembered per browser
+     ================================================================== */
+  var THEME_KEY = "it.theme";
+  var THEME_MODES = ["auto", "light", "dark"];
+  var THEME_ICONS = {
+    auto:  '<circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" />',
+    light: '<circle cx="12" cy="12" r="4" />' +
+           '<path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    dark:  '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
+  };
+
+  function currentTheme() {
+    try {
+      var t = localStorage.getItem(THEME_KEY);
+      return (t === "light" || t === "dark") ? t : "auto";
+    } catch (e) { return "auto"; }
+  }
+
+  function applyTheme(mode) {
+    if (mode === "light" || mode === "dark") {
+      document.documentElement.setAttribute("data-theme", mode);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    try {
+      if (mode === "auto") localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, mode);
+    } catch (e) {}
+
+    var btn = el("themeBtn");
+    if (btn) {
+      var label = mode.charAt(0).toUpperCase() + mode.slice(1);
+      btn.title = "Theme: " + label;
+      btn.setAttribute("aria-label", "Colour theme: " + label);
+    }
+    var icon = el("themeIcon");
+    if (icon) icon.innerHTML = THEME_ICONS[mode] || THEME_ICONS.auto;
+  }
+
+  el("themeBtn").addEventListener("click", function () {
+    var next = THEME_MODES[(THEME_MODES.indexOf(currentTheme()) + 1) % THEME_MODES.length];
+    applyTheme(next);
+    toast("Theme: " + next.charAt(0).toUpperCase() + next.slice(1));
+  });
+
+  applyTheme(currentTheme());
+
+  /* ==================================================================
+     KEYBOARD SHORTCUTS
+     ================================================================== */
+  function openShortcuts() { el("shortcutsView").classList.add("open"); }
+  function closeShortcuts() { el("shortcutsView").classList.remove("open"); }
+  function toggleShortcuts() {
+    if (el("shortcutsView").classList.contains("open")) closeShortcuts();
+    else openShortcuts();
+  }
+
+  el("shortcutsClose").addEventListener("click", closeShortcuts);
+  el("shortcutsView").addEventListener("mousedown", function (e) {
+    if (e.target === el("shortcutsView")) closeShortcuts();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    var tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select" || e.target.isContentEditable) return;
+
+    if (e.key === "/") {
+      if (el("appView").hidden) return;
+      e.preventDefault();
+      if (view !== "board" && view !== "mine") setView("board");
+      el("search").focus();
+      el("search").select();
+    } else if (e.key === "n" || e.key === "N") {
+      if (el("appView").hidden || !can("create")) return;
+      e.preventDefault();
+      openModal(null);
+    } else if (e.key === "?") {
+      if (el("appView").hidden) return;
+      e.preventDefault();
+      toggleShortcuts();
+    }
+  });
 
   /* ==================================================================
      NOTIFICATIONS — derived from issue activity, filtered by preference
