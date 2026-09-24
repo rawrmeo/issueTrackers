@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Issue Tracker</title>
 
+<!-- Installable app (PWA): manifest, icons and a home-screen theme colour. -->
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="theme-color" content="#4f46e5" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Issue Tracker" />
+
 <!-- Apply a saved theme before the first paint so there is no flash.
      "auto" (the default) leaves the attribute off and the OS decides. -->
 <script>
@@ -4184,6 +4194,16 @@ create policy issues_delete_admin on public.issues
     showAuth("login");
   });
 })();
+</script>
+
+<!-- Register the service worker so the app can be installed to the home
+     screen and still opens when the phone is offline. -->
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    });
+  }
 </script>
 </body>
 </html>
