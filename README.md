@@ -4,7 +4,7 @@ A role-based issue tracking system. Two kinds of account:
 
 | Role | Can do |
 | --- | --- |
-| **Administrator** | Everything: report, **edit**, **delete**, search, change status, and manage users (promote/demote). |
+| **Administrator** | Report, **delete**, search, set status and priority, leave a message for the reporter, and manage users (promote/demote). Cannot rewrite the title or description of a reported issue. |
 | **Normal user** | Report issues — each one starts as **None** — and search. Cannot change a status, edit details, or delete. |
 
 The rules are enforced in **both** places: the interface hides what a role
@@ -138,7 +138,9 @@ Either way, if you are using Supabase, add the live URL to Supabase's
 - **Status** — pick **Pending**, **Done** or **None** from the dropdown.
   **Admins only**: a normal user reports an issue (it starts as **None**) and
   cannot change it afterwards.
-- **Edit / delete** — the two icons on the right of a row, admins only.
+- **Edit / delete** — the two icons on the right of a row, admins only. The
+  pencil opens the status, the priority and the **message to the reporter**;
+  for someone else's report the title and description are shown read-only.
 - **Log out** — the button in the sidebar, under your name.
 
 ### Sorting
@@ -162,24 +164,25 @@ Admins see a checkbox on every row. Tick one or more rows, or press
 
 Choose **Auto**, **Light** or **Night** under **My settings → Appearance**.
 **Auto** follows your device's light/dark setting; the choice is remembered in
-this browser. The button beside the bell is a quick shortcut that cycles the
-same three modes.
+this browser.
 
 ### Repeated issues
 
-The **Reports** screen (admins) has a **Repeated issues** card. It groups issues
-whose titles match once case, spacing and punctuation are ignored
+**Statistics** has a **Most repeated issues** bar list, beside **Top reporters**.
+It groups titles that match once case, spacing and punctuation are ignored
 ("Login fails!" = "login fails"), so the same problem reported again is easy to
-spot. Each row shows the count, how many are still open, who reported them and
-when they were last touched. Admins also see a small **×N repeated** badge next
-to those titles on the board.
+spot. Admins also see a small **×N repeated** badge next to those titles on the
+board.
 
 ### Message to the reporter
 
-When an administrator edits an issue there is an optional **Message to the
-reporter** box. Whatever is typed there is shown to the person who reported the
-issue (and to other admins) in a highlighted block on the issue — handy for
-explaining a fix after marking it **Done**.
+Once an issue has been reported its **title and description are locked**, so
+nobody rewrites the reporter's own words. An administrator still sets the
+**status** and **priority**, and can leave a **Message to the reporter**.
+Whatever is typed there is shown to the person who reported the issue (and to
+other admins) in a highlighted block on the issue — handy for explaining a fix
+after marking it **Done**. The reporter also gets a **"Message from an
+administrator"** entry in their notifications.
 
 > This is the only feature that adds database columns (`admin_note`,
 > `admin_note_at`). Re-run `supabase-schema.sql` in the SQL Editor once and it
@@ -206,6 +209,10 @@ you can already see, using three rules you control in **Settings**:
 | New issues reported by others | Issues created by someone else |
 | Issues marked as done | Anything that has reached Done |
 | Open high-priority issues | Anything still open and marked High |
+
+There is also an always-on entry: **Message from an administrator**. It appears
+for the person who reported the issue (and for other admins) whenever an admin
+leaves a message on that issue.
 
 The bell shows how many entries are newer than the last time you marked them
 read. **Mark all as read** stores that timestamp on your profile, so the count
