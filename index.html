@@ -128,13 +128,13 @@
   .themebtn:hover { color: var(--text); }
   .themebtn[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.09); }
 
-  /* ============================ repeated issues (admin) ============================ */
+  /* ============================ repeated issues ============================ */
   .pill.repeat { background: var(--surface-2); color: var(--muted); text-transform: none; }
-  .repeat-row { padding: 11px 0; border-bottom: 1px solid var(--border); }
-  .repeat-row:last-child { border-bottom: 0; }
-  .repeat-head { display: flex; gap: 9px; align-items: center; }
-  .repeat-title { font-weight: 600; word-break: break-word; }
-  .repeat-meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .repeat-meta { font-size: 11.5px; color: var(--muted); margin: -4px 0 9px; }
+  .bar-fill.repeat-fill { background: var(--pending); }
+
+  /* notifications: a message from an administrator */
+  .notif .ic.note { background: var(--accent-soft); color: var(--accent); }
 
   /* ============================ admin message to the reporter ============================ */
   .admin-note {
@@ -837,11 +837,6 @@
   <main class="main">
     <!-- top bar: notifications + profile menu -->
     <div class="topbar">
-      <button class="icon-btn" id="themeBtn" aria-label="Colour theme: auto" title="Theme: Auto">
-        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" />
-        </svg>
-      </button>
       <button class="icon-btn" id="bellBtn" aria-label="Notifications" title="Notifications">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -1038,6 +1033,12 @@
         <h3>Top reporters</h3>
         <div id="byReporter"></div>
       </section>
+
+      <section class="card">
+        <h3>Most repeated issues</h3>
+        <p class="card-sub">Titles reported more than once &mdash; the same problem coming back.</p>
+        <div id="byRepeated"></div>
+      </section>
     </div>
 
     <!-- reports area (admin only) -->
@@ -1067,12 +1068,6 @@
           <button class="btn" id="repCsv">Download CSV</button>
           <button class="btn" id="repPrint">Print / Save as PDF</button>
         </div>
-      </section>
-
-      <section class="card" id="repeatedCard">
-        <h3>Repeated issues <span class="pill repeat" id="repeatedCount" hidden>0</span></h3>
-        <p class="card-sub">Issues whose title appears more than once &mdash; the same problem reported again. Use this to spot a recurring bug.</p>
-        <div id="repeatedList"></div>
       </section>
 
       <section class="card" id="reportPrint">
@@ -1244,6 +1239,7 @@
     <h2 id="modalTitle">Report an issue</h2>
     <form id="issueForm" novalidate>
       <div class="msg error" id="formErr"></div>
+      <div class="msg info" id="lockNote"></div>
       <div class="field">
         <label for="fieldTitle">Title</label>
         <input id="fieldTitle" maxlength="140" placeholder="Short summary of the issue" autocomplete="off" />
@@ -2805,25 +2801,40 @@ create policy issues_delete_admin on public.issues
     fStatus.value = issue ? issue.status : "none";
     fPriority.value = issue ? issue.priority : "medium";
 
-    var lockDetails = Boolean(issue) && !can("edit");
-    [fTitle, fDesc, fPriority].forEach(function (f) { f.disabled = lockDetails; });
+    // Only the reporter's own words are editable. Anyone else (including an
+    // administrator) may set the status and leave a message, but the title,
+    // description and priority are kept exactly as the reporter wrote them.
+    // Once an issue has been reported, its title and description stay exactly
+    // as the reporter wrote them — nobody rewrites someone else's report. The
+    // status and priority are still managed by an administrator, who can also
+    // leave a message for the reporter.
+    var isExisting = Boolean(issue);
+    [fTitle, fDesc].forEach(function (f) { f.disabled = isExisting; });
+
+    if (isExisting && can("edit")) {
+      showMsg(el("lockNote"),
+        "Reported by " + (issue.createdByEmail || "another user") + ". The title and " +
+        "description are kept as they were written \u2014 you can set the status, the " +
+        "priority, and leave a message below.", "info");
+    } else {
+      showMsg(el("lockNote"), "");
+    }
+
+    // The "message to the reporter" box is for administrators on an existing
+    // issue — on a brand-new issue there is nobody to message yet.
+    el("noteField").hidden = !can("edit") || !isExisting;
+    fNote.value = isExisting ? (issue.adminNote || "") : "";
+    fNote.disabled = false;
 
     // Hide the status control from anyone who cannot use it.
     el("statusField").hidden = !canPickStatus;
     el("statusRow").classList.toggle("single", !canPickStatus);
 
-    // The "message to the reporter" box is for administrators editing an
-    // issue that already exists — on a brand-new issue there is nobody to
-    // message yet.
-    el("noteField").hidden = !can("edit") || !issue;
-    fNote.value = issue ? (issue.adminNote || "") : "";
-    fNote.disabled = lockDetails;
-
     showMsg(formErr, "");
     backdrop.classList.add("open");
     document.body.style.overflow = "hidden";
     setTimeout(function () {
-      if (lockDetails && canPickStatus) fStatus.focus(); else fTitle.focus();
+      if (isExisting && canPickStatus) fStatus.focus(); else fTitle.focus();
     }, 30);
   }
 
@@ -2832,6 +2843,7 @@ create policy issues_delete_admin on public.issues
     document.body.style.overflow = "";
     editingId = null;
     [fTitle, fDesc, fStatus, fPriority, fNote].forEach(function (f) { f.disabled = false; });
+    showMsg(el("lockNote"), "");
   }
 
   el("newBtn").addEventListener("click", function () { openModal(null); });
@@ -2849,16 +2861,18 @@ create policy issues_delete_admin on public.issues
   el("issueForm").addEventListener("submit", function (e) {
     e.preventDefault();
 
-    var lockDetails = Boolean(editingId) && !can("edit");
-    if (!editingId && !can("create")) { showMsg(formErr, "You don't have permission to report issues."); return; }
-    if (editingId && !lockDetails && !can("edit")) { showMsg(formErr, "Only an administrator can edit issue details."); return; }
+    var isExisting = Boolean(editingId);
+    if (!isExisting && !can("create")) { showMsg(formErr, "You don't have permission to report issues."); return; }
+    if (isExisting && !can("edit")) { showMsg(formErr, "Only an administrator can open an issue."); return; }
 
     var title = fTitle.value.trim();
-    if (!lockDetails && !title) { showMsg(formErr, "Please enter a title."); fTitle.focus(); return; }
+    if (!isExisting && !title) { showMsg(formErr, "Please enter a title."); fTitle.focus(); return; }
     showMsg(formErr, "");
 
-    var payload = lockDetails
-      ? { status: fStatus.value }
+    // An existing report keeps the reporter's title and description; the admin
+    // manages the status and priority and may leave a message below.
+    var payload = isExisting
+      ? { status: fStatus.value, priority: fPriority.value }
       : {
           title: title,
           description: fDesc.value.trim(),
@@ -3389,6 +3403,8 @@ create policy issues_delete_admin on public.issues
     topKeys.forEach(function (k) { top[k] = reporters[k]; });
     el("byReporter").innerHTML = barList(top, s.total);
 
+    el("byRepeated").innerHTML = repeatBarList(8);
+
     // Issues reported on each of the last 14 days.
     var today = new Date(); today.setHours(0, 0, 0, 0);
     var series = [];
@@ -3448,38 +3464,27 @@ create policy issues_delete_admin on public.issues
     }).join("") + '</tbody></table><div style="height:20px"></div>';
   }
 
-  function renderRepeated() {
-    var wrap = el("repeatedList");
-    if (!wrap) return;
-    var groups = repeatGroups();
+  /* The Statistics screen shows repeated issues as a bar list, the same
+     shape as "Top reporters" above it. */
+  function repeatBarList(limit) {
+    var groups = repeatGroups().slice(0, limit || 8);
+    if (!groups.length) return '<p class="card-note">No repeated issues right now.</p>';
 
-    var count = el("repeatedCount");
-    if (count) { count.hidden = groups.length === 0; count.textContent = groups.length; }
-
-    if (!groups.length) {
-      wrap.innerHTML = '<p class="card-note">No repeated issues right now. When the same title is reported more than once it will appear here.</p>';
-      return;
-    }
-
-    wrap.innerHTML = groups.map(function (g) {
+    var max = groups[0].length || 1;
+    return groups.map(function (g) {
+      var pct = Math.round(g.length / max * 100);
       var open = g.filter(function (i) { return i.status !== "done"; }).length;
-      var done = g.length - open;
-      var who = {};
-      g.forEach(function (i) { who[i.createdByEmail || "unknown"] = true; });
-      var when = Math.max.apply(null, g.map(function (i) { return i.updatedAt || 0; }));
-      return '<div class="repeat-row">' +
-        '<div class="repeat-head">' +
-          '<span class="pill repeat">\u00d7' + g.length + '</span>' +
-          '<span class="repeat-title">' + esc(g[0].title) + '</span>' +
-        '</div>' +
-        '<div class="repeat-meta">' + open + ' open \u00b7 ' + done + ' done \u00b7 reported by ' +
-          esc(Object.keys(who).join(", ")) + ' \u00b7 last ' + esc(timeAgo(when)) + '</div>' +
-      '</div>';
+      var label = g[0].title;
+      return '<div class="bar-row" title="' + esc(label) + '">' +
+        '<span class="bar-label">' + esc(label) + '</span>' +
+        '<span class="bar-track"><span class="bar-fill repeat-fill" style="width:' + pct + '%"></span></span>' +
+        '<span class="bar-num">' + g.length + '</span>' +
+      '</div>' +
+      '<div class="repeat-meta">' + open + ' still open</div>';
     }).join("");
   }
 
   function renderReport() {
-    renderRepeated();
     var list = reportList();
 
     var period = (el("repFrom").value || el("repTo").value)
@@ -3651,13 +3656,6 @@ create policy issues_delete_admin on public.issues
      THEME — Auto / Light / Dark, remembered per browser
      ================================================================== */
   var THEME_KEY = "it.theme";
-  var THEME_MODES = ["auto", "light", "dark"];
-  var THEME_ICONS = {
-    auto:  '<circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" />',
-    light: '<circle cx="12" cy="12" r="4" />' +
-           '<path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
-    dark:  '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
-  };
 
   function currentTheme() {
     try {
@@ -3676,15 +3674,6 @@ create policy issues_delete_admin on public.issues
       if (mode === "auto") localStorage.removeItem(THEME_KEY);
       else localStorage.setItem(THEME_KEY, mode);
     } catch (e) {}
-
-    var btn = el("themeBtn");
-    if (btn) {
-      var label = mode.charAt(0).toUpperCase() + mode.slice(1);
-      btn.title = "Theme: " + label;
-      btn.setAttribute("aria-label", "Colour theme: " + label);
-    }
-    var icon = el("themeIcon");
-    if (icon) icon.innerHTML = THEME_ICONS[mode] || THEME_ICONS.auto;
 
     syncThemeUI();
   }
@@ -3710,12 +3699,6 @@ create policy issues_delete_admin on public.issues
       applyTheme(b.dataset.themeOpt);
       toast("Theme: " + themeLabel(b.dataset.themeOpt));
     });
-  });
-
-  el("themeBtn").addEventListener("click", function () {
-    var next = THEME_MODES[(THEME_MODES.indexOf(currentTheme()) + 1) % THEME_MODES.length];
-    applyTheme(next);
-    toast("Theme: " + themeLabel(next));
   });
 
   applyTheme(currentTheme());
@@ -3780,6 +3763,16 @@ create policy issues_delete_admin on public.issues
       if (prefs.highPriority !== false && it.priority === "high" && it.status !== "done" && it.createdAt) {
         out.push({ kind: "high", at: it.createdAt, title: "Open high-priority issue", body: it.title });
       }
+
+      // A message an administrator left on an issue. Shown to the person who
+      // reported it, and to other administrators.
+      if (it.adminNote && it.adminNoteAt && (mine || isAdmin())) {
+        out.push({
+          kind: "note", at: it.adminNoteAt,
+          title: "Message from an administrator",
+          body: it.title + " \u2014 " + it.adminNote
+        });
+      }
     });
 
     out.sort(function (a, b) { return b.at - a.at; });
@@ -3809,7 +3802,8 @@ create policy issues_delete_admin on public.issues
     created: '<path d="M12 5v14M5 12h14"/>',
     done:    '<path d="M5 13l4 4L19 7"/>',
     high:    '<path d="M12 9v4M12 17h.01"/>' +
-             '<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
+             '<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+    note:    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
   };
 
   function renderNotifications() {
