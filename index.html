@@ -688,6 +688,12 @@
         <button class="linkbtn" type="button" id="toRegister">Create an account</button>
       </div>
       <div class="msg info" id="demoHint" hidden></div>
+
+      <!-- Shown only when the app can be installed. Visible before signing in,
+           so someone can install it straight away. -->
+      <div class="auth-foot center">
+        <button class="linkbtn" type="button" id="installBtnAuth" hidden>Install this app</button>
+      </div>
     </section>
 
     <!-- register -->
@@ -875,6 +881,16 @@
           <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/>
         </svg>
         <span>Recycle bin</span><span class="count" id="navCountBin">0</span>
+      </button>
+
+      <!-- Shown only when the app can actually be installed, and hidden again
+           once it has been. No data-view: it runs its own handler. -->
+      <button class="nav-item" id="installBtn" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/>
+          <path d="M4 18v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/>
+        </svg>
+        <span>Install app</span>
       </button>
     </nav>
   </aside>
@@ -3506,6 +3522,7 @@ alter table public.issues replica identity full;
   });
 
   document.querySelectorAll(".nav-item").forEach(function (b) {
+    if (!b.dataset.view) return;          // e.g. the Install app button
     b.addEventListener("click", function () {
       var adminOnly = b.dataset.view === "users" || b.dataset.view === "settings" ||
                       b.dataset.view === "report" || b.dataset.view === "bin";
@@ -5094,6 +5111,79 @@ alter table public.issues replica identity full;
       ta.remove();
     }
   });
+
+  /* ==================================================================
+     INSTALLING THE APP
+     ------------------------------------------------------------------
+     Chrome, Edge and Android hand us a "beforeinstallprompt" event that we
+     can trigger from our own button. Safari has no such event, so there the
+     button explains what to tap instead. In both cases it disappears once
+     the app is installed, and never appears when it already is.
+     ================================================================== */
+  var installPrompt = null;
+
+  function isStandalone() {
+    return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+           window.navigator.standalone === true;
+  }
+
+  function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  }
+
+  function refreshInstallButton() {
+    var show = !isStandalone() && Boolean(installPrompt || isIOS());
+    ["installBtn", "installBtnAuth"].forEach(function (id) {
+      var b = el(id);
+      if (b) b.hidden = !show;
+    });
+  }
+
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault();                 // ask in our own time, from our own button
+    installPrompt = e;
+    refreshInstallButton();
+  });
+
+  window.addEventListener("appinstalled", function () {
+    installPrompt = null;
+    refreshInstallButton();
+    toast("App installed");
+  });
+
+  if (window.matchMedia) {
+    try {
+      window.matchMedia("(display-mode: standalone)")
+        .addEventListener("change", refreshInstallButton);
+    } catch (e) { /* older browsers */ }
+  }
+
+  function doInstall() {
+    if (installPrompt) {
+      installPrompt.prompt();
+      installPrompt.userChoice.then(function (choice) {
+        if (choice && choice.outcome === "accepted") toast("Installing…");
+        installPrompt = null;
+        refreshInstallButton();
+      });
+      return;
+    }
+
+    // Safari has no prompt API, so say exactly what to tap.
+    alert("Install this app on your phone\n\n" +
+          "iPhone / iPad:\n" +
+          "  1. Tap the Share button (square with an arrow)\n" +
+          "  2. Scroll down and tap \"Add to Home Screen\"\n" +
+          "  3. Tap Add\n\n" +
+          "Android:\n" +
+          "  Open the browser menu and tap \"Install app\",\n" +
+          "  or \"Add to Home screen\".");
+  }
+
+  el("installBtn").addEventListener("click", doInstall);
+  el("installBtnAuth").addEventListener("click", doInstall);
+
+  refreshInstallButton();
 
   /* ==================================================================
      START UP
