@@ -2,8 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Issue Tracker</title>
+
+<!-- Installable as an app: "Add to Home Screen" on a phone, or the install
+     icon in a desktop browser's address bar. -->
+<meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0e1016" media="(prefers-color-scheme: dark)" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Issues" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+<link rel="icon" href="./icon-192.png" />
 
 <!-- Apply a saved theme before the first paint so there is no flash.
      "auto" (the default) leaves the attribute off and the OS decides. -->
@@ -581,6 +593,34 @@
   .profile-grid { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
   .profile-grid .who { flex: none; width: 150px; text-align: center; }
   .profile-grid .fields { flex: 1; min-width: 240px; }
+
+  /* ============================ mobile ============================ */
+  /* Notched screens: keep the chrome clear of rounded corners and the
+     home indicator. */
+  .shell { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  .sidebar { padding-top: env(safe-area-inset-top); }
+  .main { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+  body { -webkit-text-size-adjust: 100%; }
+
+  @media (max-width: 560px) {
+    /* Anything you tap should be at least ~44px tall. */
+    .nav-item { min-height: 46px; }
+    .menu-item { min-height: 46px; }
+    .btn:not(.icon) { min-height: 44px; }
+    .field input, .field select, .field textarea,
+    .search input, .toolbar select {
+      min-height: 44px;
+      font-size: 16px;      /* stops iOS zooming in when a field is focused */
+    }
+    .icon-btn { width: 44px; height: 44px; }
+    .main { padding-left: 14px; padding-right: 14px; }
+    .toolbar { gap: 8px; }
+    .stat .n { font-size: 22px; }
+    /* The sidebar becomes a top strip on small screens; let it scroll sideways
+       rather than wrapping into a tall block. */
+    .sidebar nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .nav-item { white-space: nowrap; }
+  }
 
   /* ============================ responsive ============================ */
   @media (max-width: 900px) {
@@ -5078,6 +5118,24 @@ alter table public.issues replica identity full;
     showAuth("login");
   });
 })();
+</script>
+
+<!-- Make the app installable and usable offline. Registered last so it never
+     delays the page, and only over https or on localhost, which is where
+     service workers are allowed. Only the app shell is cached - Supabase
+     requests go straight to the network. -->
+<script>
+  (function () {
+    if (!("serviceWorker" in navigator)) return;
+    var secure = location.protocol === "https:" ||
+                 location.hostname === "localhost" ||
+                 location.hostname === "127.0.0.1";
+    if (!secure) return;
+
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("./sw.js").catch(function () { /* offline or unsupported */ });
+    });
+  })();
 </script>
 </body>
 </html>
