@@ -197,6 +197,18 @@ administrator"** entry in their notifications.
 | <kbd>?</kbd> | Show or hide the shortcut help |
 | <kbd>Esc</kbd> | Close any open dialog |
 
+### Install it on your phone
+
+The app is a **PWA**, so it can be installed to a phone's home screen and then
+opens like a normal app — full screen, its own icon:
+
+- **Android / Chrome:** open the site → menu **⋮ → Install app** (or *Add to
+  Home screen*).
+- **iPhone / Safari:** open the site → **Share → Add to Home Screen**.
+
+Thanks to the bundled service worker it also opens when the phone is offline,
+showing the last loaded version.
+
 ---
 
 ## Notifications
