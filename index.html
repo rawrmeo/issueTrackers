@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -16,7 +16,7 @@
   } catch (e) {}
 </script>
 
-<!-- Supabase client (CDN â€” no install, no build step).
+<!-- Supabase client (CDN — no install, no build step).
      If it can't load, or the keys below are empty, the app runs in a
      local demo mode so you can still try every feature. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -118,6 +118,32 @@
     border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px;
     background: var(--surface-2); font: 600 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
+
+  /* ============================ theme picker (Settings) ============================ */
+  .themepick { display: inline-flex; gap: 3px; background: var(--surface-2); padding: 3px; border-radius: 10px; }
+  .themebtn {
+    border: 0; background: transparent; color: var(--muted);
+    padding: 8px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 550;
+  }
+  .themebtn:hover { color: var(--text); }
+  .themebtn[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.09); }
+
+  /* ============================ repeated issues (admin) ============================ */
+  .pill.repeat { background: var(--surface-2); color: var(--muted); text-transform: none; }
+  .repeat-row { padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .repeat-row:last-child { border-bottom: 0; }
+  .repeat-head { display: flex; gap: 9px; align-items: center; }
+  .repeat-title { font-weight: 600; word-break: break-word; }
+  .repeat-meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+
+  /* ============================ admin message to the reporter ============================ */
+  .admin-note {
+    margin-top: 7px; padding: 8px 11px; border-radius: 9px;
+    background: var(--accent-soft); border-left: 3px solid var(--accent);
+    font-size: 12.5px; color: var(--text); word-break: break-word;
+  }
+  .admin-note b { color: var(--accent); font-weight: 650; }
+  .admin-note .when { margin-left: 6px; }
 
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -828,8 +854,8 @@
         <button class="profile-btn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
           <span class="avatar" id="avatarTop"></span>
           <span class="profile-meta">
-            <span class="nm" id="topName">â€”</span>
-            <span class="rl" id="topRole">â€”</span>
+            <span class="nm" id="topName">—</span>
+            <span class="rl" id="topRole">—</span>
           </span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
         </button>
@@ -838,8 +864,8 @@
           <div class="menu-head">
             <span class="avatar lg" id="menuAvatar"></span>
             <div style="min-width:0;">
-              <div class="nm" id="menuName">â€”</div>
-              <div class="em" id="menuEmail">â€”</div>
+              <div class="nm" id="menuName">—</div>
+              <div class="em" id="menuEmail">—</div>
               <div style="margin-top:5px;"><span class="badge" id="menuRole">user</span></div>
             </div>
           </div>
@@ -923,7 +949,7 @@
         </div>
         <div class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-          <input type="search" id="search" placeholder="Search by title, description or reporterâ€¦" aria-label="Search issues" />
+          <input type="search" id="search" placeholder="Search by title, description or reporter…" aria-label="Search issues" />
         </div>
         <select id="priorityFilter" aria-label="Filter by priority">
           <option value="all">All priorities</option>
@@ -972,7 +998,7 @@
       <div class="toolbar">
         <div class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-          <input type="search" id="userSearch" placeholder="Search users by name or emailâ€¦" aria-label="Search users" />
+          <input type="search" id="userSearch" placeholder="Search users by name or email…" aria-label="Search users" />
         </div>
       </div>
       <div class="table utable">
@@ -1041,6 +1067,12 @@
           <button class="btn" id="repCsv">Download CSV</button>
           <button class="btn" id="repPrint">Print / Save as PDF</button>
         </div>
+      </section>
+
+      <section class="card" id="repeatedCard">
+        <h3>Repeated issues <span class="pill repeat" id="repeatedCount" hidden>0</span></h3>
+        <p class="card-sub">Issues whose title appears more than once &mdash; the same problem reported again. Use this to spot a recurring bug.</p>
+        <div id="repeatedList"></div>
       </section>
 
       <section class="card" id="reportPrint">
@@ -1189,6 +1221,17 @@
           <span class="card-note" id="prefsNote"></span>
         </div>
       </section>
+
+      <section class="card" id="appearanceCard">
+        <h3>Appearance</h3>
+        <p class="card-sub"><b>Night mode</b> is your choice. <b>Auto</b> follows your device's light or dark setting.</p>
+        <div class="themepick" role="group" aria-label="Theme">
+          <button type="button" class="themebtn" data-theme-opt="auto">Auto</button>
+          <button type="button" class="themebtn" data-theme-opt="light">Light</button>
+          <button type="button" class="themebtn" data-theme-opt="dark">Night</button>
+        </div>
+        <p class="card-note" id="themeNote" style="margin-top:10px;"></p>
+      </section>
     </div>
   </main>
 </div>
@@ -1207,7 +1250,7 @@
       </div>
       <div class="field">
         <label for="fieldDesc">Description</label>
-        <textarea id="fieldDesc" maxlength="2000" placeholder="What happened? Steps to reproduce, expected behaviour, notesâ€¦"></textarea>
+        <textarea id="fieldDesc" maxlength="2000" placeholder="What happened? Steps to reproduce, expected behaviour, notes…"></textarea>
       </div>
       <div class="row2" id="statusRow">
         <div class="field" id="statusField">
@@ -1226,6 +1269,11 @@
             <option value="high">High</option>
           </select>
         </div>
+      </div>
+      <div class="field" id="noteField" hidden>
+        <label for="fieldNote">Message to the reporter <span class="card-note">(optional)</span></label>
+        <textarea id="fieldNote" maxlength="1000" placeholder="e.g. Fixed in the latest update — the login bug was in the password check."></textarea>
+        <div class="hint">The person who reported this issue will see the message. Handy after you mark it Done.</div>
       </div>
       <div class="foot">
         <button type="button" class="btn" id="cancelBtn">Cancel</button>
@@ -1284,7 +1332,7 @@
       <li>Open <b>Project Settings &rarr; API</b> and copy the <b>Project URL</b> and <b>anon public</b> key.</li>
       <li>Paste them into the two variables at the top of this file's <code>&lt;script&gt;</code> block:
         <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code>.</li>
-      <li>Reload the page and register. The anon key is safe to expose â€” Row Level Security protects the data.</li>
+      <li>Reload the page and register. The anon key is safe to expose — Row Level Security protects the data.</li>
     </ol>
 
     <pre class="sql" id="sqlBox"></pre>
@@ -1324,14 +1372,14 @@
      ================================================================== -->
 <script type="text/plain" id="schemaSql">
 -- =====================================================================
---  ISSUE TRACKER â€” SUPABASE DATABASE SCHEMA
+--  ISSUE TRACKER — SUPABASE DATABASE SCHEMA
 --  Paste into Supabase:  SQL Editor -> New query -> Run.
 --  Safe to run more than once.
 -- =====================================================================
 
 create extension if not exists "pgcrypto";
 
--- 1. Profiles â€” one row per user, stores the role
+-- 1. Profiles — one row per user, stores the role
 create table if not exists public.profiles (
   id         uuid primary key references auth.users(id) on delete cascade,
   email      text        not null,
@@ -1348,7 +1396,7 @@ alter table public.profiles add column if not exists notify_status_done   boolea
 alter table public.profiles add column if not exists notify_high_priority boolean     not null default true;
 alter table public.profiles add column if not exists notifications_seen_at timestamptz not null default 'epoch';
 
--- 2. Issues â€” the tracker records
+-- 2. Issues — the tracker records
 create table if not exists public.issues (
   id               uuid primary key default gen_random_uuid(),
   title            text        not null,
@@ -1363,7 +1411,7 @@ create table if not exists public.issues (
 
 -- Status values. 'none' means no status has been set yet.
 -- This replaces the older two-value constraint, so it also upgrades an
--- existing database â€” run it even if the table is already there.
+-- existing database — run it even if the table is already there.
 alter table public.issues drop constraint if exists issues_status_check;
 alter table public.issues add constraint issues_status_check
   check (status in ('none','pending','done'));
@@ -1379,6 +1427,11 @@ alter table public.issues alter column created_by drop not null;
 alter table public.issues drop constraint if exists issues_created_by_fkey;
 alter table public.issues add constraint issues_created_by_fkey
   foreign key (created_by) references auth.users(id) on delete set null;
+
+-- A message an administrator can leave for the reporter after fixing an
+-- issue. Empty by default, so this is safe to add to an existing database.
+alter table public.issues add column if not exists admin_note    text        not null default '';
+alter table public.issues add column if not exists admin_note_at timestamptz not null default 'epoch';
 
 create index if not exists issues_status_idx     on public.issues (status);
 create index if not exists issues_created_by_idx on public.issues (created_by);
@@ -1566,7 +1619,7 @@ create policy issues_delete_admin on public.issues
   "use strict";
 
   /* ==================================================================
-     STEP 1 â€” PASTE YOUR SUPABASE VALUES HERE
+     STEP 1 — PASTE YOUR SUPABASE VALUES HERE
      ------------------------------------------------------------------
      Leave both empty and the app runs in demo mode (this browser only).
      Fill them in for a real shared database with proper accounts.
@@ -1625,7 +1678,7 @@ create policy issues_delete_admin on public.issues
   }
 
   function timeAgo(ts) {
-    if (!ts) return "â€”";
+    if (!ts) return "—";
     var s = Math.floor((Date.now() - ts) / 1000);
     if (s < 45) return "just now";
     var m = Math.floor(s / 60); if (m < 60) return m + "m ago";
@@ -1652,7 +1705,7 @@ create policy issues_delete_admin on public.issues
     if (isBusy) {
       if (!btn.dataset.label) btn.dataset.label = btn.textContent;
       btn.disabled = true;
-      btn.textContent = label || "Please waitâ€¦";
+      btn.textContent = label || "Please wait…";
     } else {
       btn.disabled = false;
       if (btn.dataset.label) { btn.textContent = btn.dataset.label; delete btn.dataset.label; }
@@ -1664,16 +1717,16 @@ create policy issues_delete_admin on public.issues
     var m = String(message || "");
     if (/Only an administrator/i.test(m)) return "Only an administrator can do that.";
     if (/Invalid login credentials/i.test(m)) return "Incorrect email or password.";
-    if (/Email not confirmed/i.test(m)) return "This email hasn't been confirmed yet â€” open the link Supabase sent you. Testing? Turn off \"Confirm email\" in Supabase (Authentication â†’ Sign In / Providers â†’ Email).";
-    if (/User already registered|already been registered/i.test(m)) return "That email is already registered. Sign in instead â€” or, if you never confirmed it, remove the user in Supabase (Authentication â†’ Users) and try again.";
+    if (/Email not confirmed/i.test(m)) return "This email hasn't been confirmed yet — open the link Supabase sent you. Testing? Turn off \"Confirm email\" in Supabase (Authentication → Sign In / Providers → Email).";
+    if (/User already registered|already been registered/i.test(m)) return "That email is already registered. Sign in instead — or, if you never confirmed it, remove the user in Supabase (Authentication → Users) and try again.";
     if (/Password should be at least/i.test(m)) return "Password must be at least 6 characters.";
-    if (/rate limit|too many|email.*limit/i.test(m)) return "Supabase is rate-limiting emails. Its built-in sender allows only a few per hour and every sign-up sends a confirmation email, so retrying makes it worse. Wait ~1 hour, or switch off \"Confirm email\" in Supabase (Authentication â†’ Sign In / Providers â†’ Email) while testing.";
+    if (/rate limit|too many|email.*limit/i.test(m)) return "Supabase is rate-limiting emails. Its built-in sender allows only a few per hour and every sign-up sends a confirmation email, so retrying makes it worse. Wait ~1 hour, or switch off \"Confirm email\" in Supabase (Authentication → Sign In / Providers → Email) while testing.";
     if (/valid email/i.test(m)) return "Please enter a valid email address.";
     if (/row-level security|permission denied/i.test(m)) return "You don't have permission to do that.";
     if (/relation .* does not exist|schema cache/i.test(m)) return "Database tables are missing. Run supabase-schema.sql first (see Connect Supabase).";
-    if (/issues_status_check|violates check constraint/i.test(m)) return "Your database doesn't accept the \"None\" status yet. Re-run supabase-schema.sql in Supabase (SQL Editor â†’ New query â†’ Run) â€” it's safe to repeat.";
-    if (/column .* does not exist/i.test(m)) return "Your database is missing some newer profile columns. Re-run supabase-schema.sql in Supabase (SQL Editor â†’ New query â†’ Run) â€” it's safe to repeat.";
-    if (/Could not find the function|PGRST202/i.test(m)) return "This needs a newer database function. Re-run supabase-schema.sql in Supabase (SQL Editor â†’ New query â†’ Run) â€” it's safe to repeat.";
+    if (/issues_status_check|violates check constraint/i.test(m)) return "Your database doesn't accept the \"None\" status yet. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
+    if (/column .* does not exist/i.test(m)) return "Your database is missing some newer profile columns. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
+    if (/Could not find the function|PGRST202/i.test(m)) return "This needs a newer database function. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
     return m || "Something went wrong. Please try again.";
   }
 
@@ -1682,7 +1735,7 @@ create policy issues_delete_admin on public.issues
   }
 
   /* ==================================================================
-     BACKEND â€” two implementations behind one interface
+     BACKEND — two implementations behind one interface
      so the UI never has to care which one is live.
      ================================================================== */
   var cloudEnabled = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase);
@@ -1731,12 +1784,16 @@ create policy issues_delete_admin on public.issues
       var seedIssues = [
         { title: "Login page rejects a valid password",
           description: "Typing the correct password reports 'incorrect password' on the first attempt.",
-          status: "pending", priority: "high", email: "user@demo.com" },
+          status: "done", priority: "high", email: "user@demo.com",
+          note: "Fixed in today's update - the password check now trims spaces. Thanks for the clear steps!" },
         { title: "Search the dashboard by description",
           description: "Searching should also match the issue description, not just the title.",
           status: "done", priority: "medium", email: "admin@demo.com" },
         { title: "Typos in the empty state message",
-          description: "", status: "pending", priority: "low", email: "admin@demo.com" }
+          description: "", status: "pending", priority: "low", email: "admin@demo.com" },
+        { title: "Login page rejects a VALID password!",
+          description: "Reported again - same login problem from a different account.",
+          status: "pending", priority: "medium", email: "admin@demo.com" }
       ];
 
       return Promise.all([hash("admin123"), hash("user123")]).then(function (hashes) {
@@ -1754,7 +1811,9 @@ create policy issues_delete_admin on public.issues
             createdByName: "",
             createdByEmail: it.email,
             createdAt: now - (i * 5 + 8) * 86400000,
-            updatedAt: now - (i * 5 + 8) * 86400000
+            updatedAt: now - (i * 5 + 8) * 86400000,
+            adminNote: it.note || "",
+            adminNoteAt: it.note ? now - 3600000 : 0
           };
         }));
         write(K_SEEDED, true);
@@ -1857,7 +1916,9 @@ create policy issues_delete_admin on public.issues
             createdByName: currentUser.name || "",
             createdByEmail: currentUser.email,
             createdAt: Date.now(),
-            updatedAt: Date.now()
+            updatedAt: Date.now(),
+            adminNote: "",
+            adminNoteAt: 0
           };
           list.push(row);
           write(K_ISSUES, list);
@@ -2073,7 +2134,9 @@ create policy issues_delete_admin on public.issues
             createdByName: "",
             createdByEmail: r.created_by_email || "",
             createdAt: new Date(r.created_at).getTime(),
-            updatedAt: new Date(r.updated_at).getTime()
+            updatedAt: new Date(r.updated_at).getTime(),
+            adminNote: r.admin_note || "",
+            adminNoteAt: r.admin_note_at ? new Date(r.admin_note_at).getTime() : 0
           };
         });
       });
@@ -2094,7 +2157,14 @@ create policy issues_delete_admin on public.issues
     },
 
     updateIssue: function (id, patch) {
-      return sb.from("issues").update(patch).eq("id", id).then(function (res) {
+      // Translate the app's field names into database column names.
+      var row = {};
+      Object.keys(patch).forEach(function (k) {
+        if (k === "adminNote") row.admin_note = patch[k];
+        else if (k === "adminNoteAt") row.admin_note_at = new Date(patch[k]).toISOString();
+        else row[k] = patch[k];
+      });
+      return sb.from("issues").update(row).eq("id", id).then(function (res) {
         if (res.error) throw res.error;
       });
     },
@@ -2387,6 +2457,37 @@ create policy issues_delete_admin on public.issues
     return (b.updatedAt || 0) - (a.updatedAt || 0);
   }
 
+  /* ----------------------------------------------------------------
+     REPEATED ISSUES
+     Group issues whose titles match once case, spacing and punctuation
+     are ignored ("Login fails!" == "login fails"). Admins use this to
+     spot the same problem being reported again and again.
+     ---------------------------------------------------------------- */
+  var repeatIndex = {};
+
+  function normTitle(t) {
+    return String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  }
+
+  function buildRepeatIndex() {
+    var map = {};
+    issues.forEach(function (it) {
+      var k = normTitle(it.title);
+      if (!k) return;
+      (map[k] = map[k] || []).push(it);
+    });
+    return map;
+  }
+
+  function repeatGroups() {
+    var map = buildRepeatIndex();
+    return Object.keys(map).map(function (k) { return map[k]; })
+      .filter(function (g) { return g.length > 1; })
+      .sort(function (a, b) {
+        return b.length - a.length || (b[0].updatedAt || 0) - (a[0].updatedAt || 0);
+      });
+  }
+
   function visibleIssues() {
     var q = query.trim().toLowerCase();
     return baseIssues()
@@ -2429,6 +2530,7 @@ create policy issues_delete_admin on public.issues
 
   function render() {
     updateStats();
+    repeatIndex = buildRepeatIndex();
     var items = visibleIssues();
     listEl.innerHTML = items.length ? items.map(row).join("") : emptyState(baseIssues().length);
     updateBulkBar();
@@ -2482,6 +2584,18 @@ create policy issues_delete_admin on public.issues
       ? '<span class="pill stale" title="Open for ' + openDays(it) + ' days">Open ' + openDays(it) + 'd</span>'
       : "";
 
+    /* Admins see how often this title has been reported before. */
+    var repeats = can("manageUsers") ? (repeatIndex[normTitle(it.title)] || []).length : 0;
+    var repeatBadge = repeats > 1
+      ? '<span class="pill repeat" title="This title has been reported ' + repeats + ' times">\u00d7' + repeats + ' repeated</span>'
+      : "";
+
+    /* A message from an admin is shown to the reporter and to other admins. */
+    var adminNote = (it.adminNote && (isMine(it) || isAdmin()))
+      ? '<div class="admin-note"><b>Message from admin:</b> ' + esc(it.adminNote) +
+          (it.adminNoteAt ? '<span class="when">' + timeAgo(it.adminNoteAt) + '</span>' : "") + '</div>'
+      : "";
+
     var actions =
       (can("edit")
         ? '<button class="btn ghost icon" data-action="edit" title="Edit issue" aria-label="Edit issue">' +
@@ -2493,13 +2607,14 @@ create policy issues_delete_admin on public.issues
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
             '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg></button>'
         : "") ||
-      '<span class="when">â€”</span>';
+      '<span class="when">—</span>';
 
     return '<div class="row' + (isDone ? " is-done" : "") + '" data-id="' + esc(it.id) + '">' +
       '<div class="col-status">' + check + statusControl(it) + '</div>' +
       '<div>' +
-        '<div class="issue-title">' + esc(it.title) + stale + '</div>' +
+        '<div class="issue-title">' + esc(it.title) + stale + repeatBadge + '</div>' +
         (it.description ? '<div class="issue-desc">' + esc(it.description) + '</div>' : "") +
+        adminNote +
       '</div>' +
       '<div><span class="pill ' + esc(it.priority) + '">' + esc(it.priority) + '</span></div>' +
       '<div class="reporter"><span class="owner">' + esc(reporter) + '</span></div>' +
@@ -2674,6 +2789,7 @@ create policy issues_delete_admin on public.issues
   var fDesc = el("fieldDesc");
   var fStatus = el("fieldStatus");
   var fPriority = el("fieldPriority");
+  var fNote = el("fieldNote");
   var formErr = el("formErr");
 
   function openModal(issue) {
@@ -2696,6 +2812,13 @@ create policy issues_delete_admin on public.issues
     el("statusField").hidden = !canPickStatus;
     el("statusRow").classList.toggle("single", !canPickStatus);
 
+    // The "message to the reporter" box is for administrators editing an
+    // issue that already exists — on a brand-new issue there is nobody to
+    // message yet.
+    el("noteField").hidden = !can("edit") || !issue;
+    fNote.value = issue ? (issue.adminNote || "") : "";
+    fNote.disabled = lockDetails;
+
     showMsg(formErr, "");
     backdrop.classList.add("open");
     document.body.style.overflow = "hidden";
@@ -2708,7 +2831,7 @@ create policy issues_delete_admin on public.issues
     backdrop.classList.remove("open");
     document.body.style.overflow = "";
     editingId = null;
-    [fTitle, fDesc, fStatus, fPriority].forEach(function (f) { f.disabled = false; });
+    [fTitle, fDesc, fStatus, fPriority, fNote].forEach(function (f) { f.disabled = false; });
   }
 
   el("newBtn").addEventListener("click", function () { openModal(null); });
@@ -2744,8 +2867,20 @@ create policy issues_delete_admin on public.issues
           priority: fPriority.value
         };
 
+    // Administrators can attach a message for the reporter. It is only sent
+    // when it actually changed, so a database that predates the column still
+    // works for ordinary edits.
+    if (can("edit") && !el("noteField").hidden) {
+      var note = fNote.value.trim();
+      var prevNote = (editingId && byId(editingId)) ? (byId(editingId).adminNote || "") : "";
+      if (note !== prevNote) {
+        payload.adminNote = note;
+        payload.adminNoteAt = Date.now();
+      }
+    }
+
     var btn = el("saveBtn");
-    busy(btn, true, "Savingâ€¦");
+    busy(btn, true, "Saving…");
     var work = editingId ? api.updateIssue(editingId, payload) : api.createIssue(payload);
 
     mutate(work, editingId ? "Changes saved" : "Issue reported")
@@ -2788,7 +2923,7 @@ create policy issues_delete_admin on public.issues
       }).length;
 
       return '<div class="row" data-uid="' + esc(u.id) + '">' +
-        '<div><span class="issue-title">' + esc(u.name || "â€”") + '</span>' +
+        '<div><span class="issue-title">' + esc(u.name || "—") + '</span>' +
           (isMe ? ' <span class="badge you">you</span>' : "") + '</div>' +
         '<div class="reporter"><span class="owner">' + esc(u.email) + '</span></div>' +
         '<div>' +
@@ -2798,7 +2933,7 @@ create policy issues_delete_admin on public.issues
             '<option value="admin"' + (u.role === "admin" ? " selected" : "") + '>Administrator</option>' +
           '</select>' +
         '</div>' +
-        '<div class="when">' + (u.createdAt ? timeAgo(u.createdAt) : "â€”") + '</div>' +
+        '<div class="when">' + (u.createdAt ? timeAgo(u.createdAt) : "—") + '</div>' +
         '<div style="text-align:right" class="when">' + reports + '</div>' +
         '<div class="col-actions">' +
           '<button class="btn ghost icon" data-user-action="edit" title="Edit user" aria-label="Edit user">' +
@@ -2905,7 +3040,7 @@ create policy issues_delete_admin on public.issues
     if (!self) patch.role = el("ufRole").value;
 
     var btn = el("userSave");
-    busy(btn, true, "Savingâ€¦");
+    busy(btn, true, "Saving…");
     api.updateUser(editingUserId, patch).then(function () {
       busy(btn, false);
       if (self) {
@@ -2950,7 +3085,7 @@ create policy issues_delete_admin on public.issues
   }
 
   /* ==================================================================
-     SETTINGS (admin) â€” backup, restore and maintenance
+     SETTINGS (admin) — backup, restore and maintenance
      ================================================================== */
   var LAST_BACKUP_KEY = "it.lastBackup";
   var pendingImport = null;
@@ -3013,12 +3148,12 @@ create policy issues_delete_admin on public.issues
     try { last = JSON.parse(localStorage.getItem(LAST_BACKUP_KEY) || "null"); } catch (e) {}
 
     var rows = [
-      ["Data source", api.mode === "demo" ? "Demo â€” this browser only" : "Supabase â€” shared"],
+      ["Data source", api.mode === "demo" ? "Demo — this browser only" : "Supabase — shared"],
       ["Signed in as", currentUser.email],
       ["Your role", isAdmin() ? "Administrator" : "Normal user"],
       ["Issues", String(issues.length)],
       ["Users", String(users.length)],
-      ["Last backup", last ? last.kind + " Â· " + timeAgo(last.at) : "never"]
+      ["Last backup", last ? last.kind + " · " + timeAgo(last.at) : "never"]
     ];
 
     el("statusList").innerHTML = rows.map(function (r) {
@@ -3037,7 +3172,7 @@ create policy issues_delete_admin on public.issues
     downloadFile("issue-tracker-backup-" + stamp() + ".json",
                  JSON.stringify(backupObject(), null, 2), "application/json");
     markBackup("JSON backup");
-    toast("Backup downloaded â€” " + issues.length + " issues");
+    toast("Backup downloaded — " + issues.length + " issues");
   });
 
   el("exportCsvBtn").addEventListener("click", function () {
@@ -3060,7 +3195,7 @@ create policy issues_delete_admin on public.issues
     downloadFile("issue-tracker-" + stamp() + ".csv",
                  "\uFEFF" + lines.join("\r\n"), "text/csv;charset=utf-8");
     markBackup("CSV export");
-    toast("CSV downloaded â€” " + issues.length + " issues");
+    toast("CSV downloaded — " + issues.length + " issues");
   });
 
   /* ---------- restore ---------- */
@@ -3111,7 +3246,7 @@ create policy issues_delete_admin on public.issues
         return;
       }
 
-      el("importName").textContent = file.name + " â€” " + pendingImport.length + " issues";
+      el("importName").textContent = file.name + " — " + pendingImport.length + " issues";
       el("importBtn").disabled = false;
     };
     reader.onerror = function () { toast("Could not read that file."); };
@@ -3130,7 +3265,7 @@ create policy issues_delete_admin on public.issues
     if (!confirm(msg)) return;
 
     var btn = el("importBtn");
-    busy(btn, true, "Restoringâ€¦");
+    busy(btn, true, "Restoring…");
 
     var work = (mode === "replace" ? api.deleteAllIssues() : Promise.resolve())
       .then(function () { return api.bulkCreateIssues(pendingImport); });
@@ -3158,7 +3293,7 @@ create policy issues_delete_admin on public.issues
     if (prompt("Type DELETE to confirm:") !== "DELETE") { toast("Cancelled"); return; }
 
     var btn = el("deleteAllBtn");
-    busy(btn, true, "Deletingâ€¦");
+    busy(btn, true, "Deleting…");
     api.deleteAllIssues().then(function () {
       busy(btn, false);
       toast("All issues deleted");
@@ -3170,7 +3305,7 @@ create policy issues_delete_admin on public.issues
   });
 
   /* ==================================================================
-     STATISTICS (everyone) â€” a read-only summary for review
+     STATISTICS (everyone) — a read-only summary for review
      ================================================================== */
   function computeStats(list) {
     var byStatus = { pending: 0, done: 0, none: 0 };
@@ -3280,7 +3415,7 @@ create policy issues_delete_admin on public.issues
   }
 
   /* ==================================================================
-     REPORTS (admin) â€” a printable summary
+     REPORTS (admin) — a printable summary
      ================================================================== */
   function reportList() {
     var from = el("repFrom").value ? new Date(el("repFrom").value + "T00:00:00").getTime() : null;
@@ -3313,7 +3448,38 @@ create policy issues_delete_admin on public.issues
     }).join("") + '</tbody></table><div style="height:20px"></div>';
   }
 
+  function renderRepeated() {
+    var wrap = el("repeatedList");
+    if (!wrap) return;
+    var groups = repeatGroups();
+
+    var count = el("repeatedCount");
+    if (count) { count.hidden = groups.length === 0; count.textContent = groups.length; }
+
+    if (!groups.length) {
+      wrap.innerHTML = '<p class="card-note">No repeated issues right now. When the same title is reported more than once it will appear here.</p>';
+      return;
+    }
+
+    wrap.innerHTML = groups.map(function (g) {
+      var open = g.filter(function (i) { return i.status !== "done"; }).length;
+      var done = g.length - open;
+      var who = {};
+      g.forEach(function (i) { who[i.createdByEmail || "unknown"] = true; });
+      var when = Math.max.apply(null, g.map(function (i) { return i.updatedAt || 0; }));
+      return '<div class="repeat-row">' +
+        '<div class="repeat-head">' +
+          '<span class="pill repeat">\u00d7' + g.length + '</span>' +
+          '<span class="repeat-title">' + esc(g[0].title) + '</span>' +
+        '</div>' +
+        '<div class="repeat-meta">' + open + ' open \u00b7 ' + done + ' done \u00b7 reported by ' +
+          esc(Object.keys(who).join(", ")) + ' \u00b7 last ' + esc(timeAgo(when)) + '</div>' +
+      '</div>';
+    }).join("");
+  }
+
   function renderReport() {
+    renderRepeated();
     var list = reportList();
 
     var period = (el("repFrom").value || el("repTo").value)
@@ -3386,7 +3552,7 @@ create policy issues_delete_admin on public.issues
 
     downloadFile("issue-report-" + stamp() + ".csv",
                  "\uFEFF" + lines.join("\r\n"), "text/csv;charset=utf-8");
-    toast("Report downloaded â€” " + list.length + " issues");
+    toast("Report downloaded — " + list.length + " issues");
   });
 
   el("repPrint").addEventListener("click", function () {
@@ -3396,7 +3562,7 @@ create policy issues_delete_admin on public.issues
   });
 
   /* ==================================================================
-     IDENTITY â€” top-bar avatar and the profile menu
+     IDENTITY — top-bar avatar and the profile menu
      ================================================================== */
   function initials(name, email) {
     var s = String(name || email || "?").trim();
@@ -3482,7 +3648,7 @@ create policy issues_delete_admin on public.issues
   el("bellBtn").addEventListener("click", function () { setView("notifications"); });
 
   /* ==================================================================
-     THEME â€” Auto / Light / Dark, remembered per browser
+     THEME — Auto / Light / Dark, remembered per browser
      ================================================================== */
   var THEME_KEY = "it.theme";
   var THEME_MODES = ["auto", "light", "dark"];
@@ -3519,12 +3685,37 @@ create policy issues_delete_admin on public.issues
     }
     var icon = el("themeIcon");
     if (icon) icon.innerHTML = THEME_ICONS[mode] || THEME_ICONS.auto;
+
+    syncThemeUI();
   }
+
+  /* Keep the Settings buttons and the top-bar button showing the same mode. */
+  function themeLabel(mode) { return mode.charAt(0).toUpperCase() + mode.slice(1); }
+
+  function syncThemeUI() {
+    var mode = currentTheme();
+    document.querySelectorAll(".themebtn").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.themeOpt === mode));
+    });
+    var note = el("themeNote");
+    if (note) {
+      note.textContent = mode === "auto"
+        ? "Currently following your device."
+        : "Currently " + (mode === "dark" ? "Night" : "Light") + " mode.";
+    }
+  }
+
+  document.querySelectorAll(".themebtn").forEach(function (b) {
+    b.addEventListener("click", function () {
+      applyTheme(b.dataset.themeOpt);
+      toast("Theme: " + themeLabel(b.dataset.themeOpt));
+    });
+  });
 
   el("themeBtn").addEventListener("click", function () {
     var next = THEME_MODES[(THEME_MODES.indexOf(currentTheme()) + 1) % THEME_MODES.length];
     applyTheme(next);
-    toast("Theme: " + next.charAt(0).toUpperCase() + next.slice(1));
+    toast("Theme: " + themeLabel(next));
   });
 
   applyTheme(currentTheme());
@@ -3567,7 +3758,7 @@ create policy issues_delete_admin on public.issues
   });
 
   /* ==================================================================
-     NOTIFICATIONS â€” derived from issue activity, filtered by preference
+     NOTIFICATIONS — derived from issue activity, filtered by preference
      ================================================================== */
   function buildNotifications() {
     if (!currentUser) return [];
@@ -3682,6 +3873,7 @@ create policy issues_delete_admin on public.issues
     el("prefDone").checked = p.statusDone !== false;
     el("prefHigh").checked = p.highPriority !== false;
     el("prefsNote").textContent = "";
+    syncThemeUI();
   }
 
   function savePrefs() {
@@ -3691,7 +3883,7 @@ create policy issues_delete_admin on public.issues
       highPriority: el("prefHigh").checked
     };
 
-    el("prefsNote").textContent = "Savingâ€¦";
+    el("prefsNote").textContent = "Saving…";
     api.updateProfile({ notify: notify }).then(function (u) {
       if (u) currentUser = u;
       else currentUser.notify = notify;
@@ -3722,7 +3914,7 @@ create policy issues_delete_admin on public.issues
   el("profSave").addEventListener("click", function () {
     var name = el("profName").value.trim();
     var btn = el("profSave");
-    busy(btn, true, "Savingâ€¦");
+    busy(btn, true, "Saving…");
     api.updateProfile({ name: name }).then(function (u) {
       busy(btn, false);
       if (u) currentUser = u;
@@ -3811,7 +4003,7 @@ create policy issues_delete_admin on public.issues
     if (!email || !password) { showMsg(err, "Enter your email and password."); return; }
 
     var btn = el("loginBtn");
-    busy(btn, true, "Signing inâ€¦");
+    busy(btn, true, "Signing in…");
     api.signIn(email, password).then(function (res) {
       busy(btn, false);
       currentUser = res.user;
@@ -3838,7 +4030,7 @@ create policy issues_delete_admin on public.issues
     if (password !== confirmPw) { showMsg(err, "The two passwords do not match."); return; }
 
     var btn = el("regBtn");
-    busy(btn, true, "Creatingâ€¦");
+    busy(btn, true, "Creating…");
     api.signUp({ email: email, password: password, fullName: name, role: role }).then(function (res) {
       busy(btn, false);
       el("loginEmail").value = email;
@@ -3851,7 +4043,7 @@ create policy issues_delete_admin on public.issues
       } else {
         currentUser = res.user;
         showApp();
-        toast("Account created â€” welcome!");
+        toast("Account created — welcome!");
       }
     }).catch(function (ex) {
       busy(btn, false);
@@ -3867,7 +4059,7 @@ create policy issues_delete_admin on public.issues
     if (!email) { showMsg(err, "Enter your email."); return; }
 
     var btn = el("forgotBtn");
-    busy(btn, true, "Sendingâ€¦");
+    busy(btn, true, "Sending…");
     api.sendReset(email).then(function (res) {
       busy(btn, false);
       if (res && res.demo) {
@@ -3907,7 +4099,7 @@ create policy issues_delete_admin on public.issues
     if (password !== confirmPw) { showMsg(err, "The two passwords do not match."); return; }
 
     var btn = el("resetBtn");
-    busy(btn, true, "Savingâ€¦");
+    busy(btn, true, "Saving…");
     api.updatePassword(resetEmail, password).then(function () {
       busy(btn, false);
       inRecovery = false;
@@ -3970,7 +4162,7 @@ create policy issues_delete_admin on public.issues
       ta.value = SETUP_SQL;
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand("copy"); done(); } catch (e) { toast("Copy failed â€” select the text manually"); }
+      try { document.execCommand("copy"); done(); } catch (e) { toast("Copy failed — select the text manually"); }
       ta.remove();
     }
   });
