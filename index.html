@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -16,7 +16,7 @@
   } catch (e) {}
 </script>
 
-<!-- Supabase client (CDN — no install, no build step).
+<!-- Supabase client (CDN â€” no install, no build step).
      If it can't load, or the keys below are empty, the app runs in a
      local demo mode so you can still try every feature. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -828,8 +828,8 @@
         <button class="profile-btn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
           <span class="avatar" id="avatarTop"></span>
           <span class="profile-meta">
-            <span class="nm" id="topName">—</span>
-            <span class="rl" id="topRole">—</span>
+            <span class="nm" id="topName">â€”</span>
+            <span class="rl" id="topRole">â€”</span>
           </span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
         </button>
@@ -838,8 +838,8 @@
           <div class="menu-head">
             <span class="avatar lg" id="menuAvatar"></span>
             <div style="min-width:0;">
-              <div class="nm" id="menuName">—</div>
-              <div class="em" id="menuEmail">—</div>
+              <div class="nm" id="menuName">â€”</div>
+              <div class="em" id="menuEmail">â€”</div>
               <div style="margin-top:5px;"><span class="badge" id="menuRole">user</span></div>
             </div>
           </div>
@@ -923,7 +923,7 @@
         </div>
         <div class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-          <input type="search" id="search" placeholder="Search by title, description or reporter…" aria-label="Search issues" />
+          <input type="search" id="search" placeholder="Search by title, description or reporterâ€¦" aria-label="Search issues" />
         </div>
         <select id="priorityFilter" aria-label="Filter by priority">
           <option value="all">All priorities</option>
@@ -972,7 +972,7 @@
       <div class="toolbar">
         <div class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-          <input type="search" id="userSearch" placeholder="Search users by name or email…" aria-label="Search users" />
+          <input type="search" id="userSearch" placeholder="Search users by name or emailâ€¦" aria-label="Search users" />
         </div>
       </div>
       <div class="table utable">
@@ -1207,7 +1207,7 @@
       </div>
       <div class="field">
         <label for="fieldDesc">Description</label>
-        <textarea id="fieldDesc" maxlength="2000" placeholder="What happened? Steps to reproduce, expected behaviour, notes…"></textarea>
+        <textarea id="fieldDesc" maxlength="2000" placeholder="What happened? Steps to reproduce, expected behaviour, notesâ€¦"></textarea>
       </div>
       <div class="row2" id="statusRow">
         <div class="field" id="statusField">
@@ -1284,7 +1284,7 @@
       <li>Open <b>Project Settings &rarr; API</b> and copy the <b>Project URL</b> and <b>anon public</b> key.</li>
       <li>Paste them into the two variables at the top of this file's <code>&lt;script&gt;</code> block:
         <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code>.</li>
-      <li>Reload the page and register. The anon key is safe to expose — Row Level Security protects the data.</li>
+      <li>Reload the page and register. The anon key is safe to expose â€” Row Level Security protects the data.</li>
     </ol>
 
     <pre class="sql" id="sqlBox"></pre>
@@ -1324,14 +1324,14 @@
      ================================================================== -->
 <script type="text/plain" id="schemaSql">
 -- =====================================================================
---  ISSUE TRACKER — SUPABASE DATABASE SCHEMA
+--  ISSUE TRACKER â€” SUPABASE DATABASE SCHEMA
 --  Paste into Supabase:  SQL Editor -> New query -> Run.
 --  Safe to run more than once.
 -- =====================================================================
 
 create extension if not exists "pgcrypto";
 
--- 1. Profiles — one row per user, stores the role
+-- 1. Profiles â€” one row per user, stores the role
 create table if not exists public.profiles (
   id         uuid primary key references auth.users(id) on delete cascade,
   email      text        not null,
@@ -1348,7 +1348,7 @@ alter table public.profiles add column if not exists notify_status_done   boolea
 alter table public.profiles add column if not exists notify_high_priority boolean     not null default true;
 alter table public.profiles add column if not exists notifications_seen_at timestamptz not null default 'epoch';
 
--- 2. Issues — the tracker records
+-- 2. Issues â€” the tracker records
 create table if not exists public.issues (
   id               uuid primary key default gen_random_uuid(),
   title            text        not null,
@@ -1363,7 +1363,7 @@ create table if not exists public.issues (
 
 -- Status values. 'none' means no status has been set yet.
 -- This replaces the older two-value constraint, so it also upgrades an
--- existing database — run it even if the table is already there.
+-- existing database â€” run it even if the table is already there.
 alter table public.issues drop constraint if exists issues_status_check;
 alter table public.issues add constraint issues_status_check
   check (status in ('none','pending','done'));
@@ -1566,13 +1566,13 @@ create policy issues_delete_admin on public.issues
   "use strict";
 
   /* ==================================================================
-     STEP 1 — PASTE YOUR SUPABASE VALUES HERE
+     STEP 1 â€” PASTE YOUR SUPABASE VALUES HERE
      ------------------------------------------------------------------
      Leave both empty and the app runs in demo mode (this browser only).
      Fill them in for a real shared database with proper accounts.
      ================================================================== */
-  var SUPABASE_URL      = "https://oswrhpvkhlpvhinsatwh.supabase.co";   // e.g. "https://abcdefghijklm.supabase.co"
-  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zd3JocHZraGxwdmhpbnNhdHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxMDYxODcsImV4cCI6MjEwNTY4MjE4N30.--K15fOHPJK4iGYcQBLRvJIgg2Um7C94aWYLYvO_5CY";   // the long "anon public" key
+  var SUPABASE_URL      = "";   // e.g. "https://abcdefghijklm.supabase.co"
+  var SUPABASE_ANON_KEY = "";   // the long "anon public" key
 
   /* ==================================================================
      ROLES AND PERMISSIONS
@@ -1625,7 +1625,7 @@ create policy issues_delete_admin on public.issues
   }
 
   function timeAgo(ts) {
-    if (!ts) return "—";
+    if (!ts) return "â€”";
     var s = Math.floor((Date.now() - ts) / 1000);
     if (s < 45) return "just now";
     var m = Math.floor(s / 60); if (m < 60) return m + "m ago";
@@ -1652,7 +1652,7 @@ create policy issues_delete_admin on public.issues
     if (isBusy) {
       if (!btn.dataset.label) btn.dataset.label = btn.textContent;
       btn.disabled = true;
-      btn.textContent = label || "Please wait…";
+      btn.textContent = label || "Please waitâ€¦";
     } else {
       btn.disabled = false;
       if (btn.dataset.label) { btn.textContent = btn.dataset.label; delete btn.dataset.label; }
@@ -1664,16 +1664,16 @@ create policy issues_delete_admin on public.issues
     var m = String(message || "");
     if (/Only an administrator/i.test(m)) return "Only an administrator can do that.";
     if (/Invalid login credentials/i.test(m)) return "Incorrect email or password.";
-    if (/Email not confirmed/i.test(m)) return "This email hasn't been confirmed yet — open the link Supabase sent you. Testing? Turn off \"Confirm email\" in Supabase (Authentication → Sign In / Providers → Email).";
-    if (/User already registered|already been registered/i.test(m)) return "That email is already registered. Sign in instead — or, if you never confirmed it, remove the user in Supabase (Authentication → Users) and try again.";
+    if (/Email not confirmed/i.test(m)) return "This email hasn't been confirmed yet â€” open the link Supabase sent you. Testing? Turn off \"Confirm email\" in Supabase (Authentication â†’ Sign In / Providers â†’ Email).";
+    if (/User already registered|already been registered/i.test(m)) return "That email is already registered. Sign in instead â€” or, if you never confirmed it, remove the user in Supabase (Authentication â†’ Users) and try again.";
     if (/Password should be at least/i.test(m)) return "Password must be at least 6 characters.";
-    if (/rate limit|too many|email.*limit/i.test(m)) return "Supabase is rate-limiting emails. Its built-in sender allows only a few per hour and every sign-up sends a confirmation email, so retrying makes it worse. Wait ~1 hour, or switch off \"Confirm email\" in Supabase (Authentication → Sign In / Providers → Email) while testing.";
+    if (/rate limit|too many|email.*limit/i.test(m)) return "Supabase is rate-limiting emails. Its built-in sender allows only a few per hour and every sign-up sends a confirmation email, so retrying makes it worse. Wait ~1 hour, or switch off \"Confirm email\" in Supabase (Authentication â†’ Sign In / Providers â†’ Email) while testing.";
     if (/valid email/i.test(m)) return "Please enter a valid email address.";
     if (/row-level security|permission denied/i.test(m)) return "You don't have permission to do that.";
     if (/relation .* does not exist|schema cache/i.test(m)) return "Database tables are missing. Run supabase-schema.sql first (see Connect Supabase).";
-    if (/issues_status_check|violates check constraint/i.test(m)) return "Your database doesn't accept the \"None\" status yet. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
-    if (/column .* does not exist/i.test(m)) return "Your database is missing some newer profile columns. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
-    if (/Could not find the function|PGRST202/i.test(m)) return "This needs a newer database function. Re-run supabase-schema.sql in Supabase (SQL Editor → New query → Run) — it's safe to repeat.";
+    if (/issues_status_check|violates check constraint/i.test(m)) return "Your database doesn't accept the \"None\" status yet. Re-run supabase-schema.sql in Supabase (SQL Editor â†’ New query â†’ Run) â€” it's safe to repeat.";
+    if (/column .* does not exist/i.test(m)) return "Your database is missing some newer profile columns. Re-run supabase-schema.sql in Supabase (SQL Editor â†’ New query â†’ Run) â€” it's safe to repeat.";
+    if (/Could not find the function|PGRST202/i.test(m)) return "This needs a newer database function. Re-run supabase-schema.sql in Supabase (SQL Editor â†’ New query â†’ Run) â€” it's safe to repeat.";
     return m || "Something went wrong. Please try again.";
   }
 
@@ -1682,7 +1682,7 @@ create policy issues_delete_admin on public.issues
   }
 
   /* ==================================================================
-     BACKEND — two implementations behind one interface
+     BACKEND â€” two implementations behind one interface
      so the UI never has to care which one is live.
      ================================================================== */
   var cloudEnabled = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase);
@@ -1753,8 +1753,8 @@ create policy issues_delete_admin on public.issues
             createdBy: it.email,
             createdByName: "",
             createdByEmail: it.email,
-            createdAt: now - (i + 1) * 3600000,
-            updatedAt: now - (i + 1) * 3600000
+            createdAt: now - (i * 5 + 8) * 86400000,
+            updatedAt: now - (i * 5 + 8) * 86400000
           };
         }));
         write(K_SEEDED, true);
@@ -2493,7 +2493,7 @@ create policy issues_delete_admin on public.issues
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
             '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg></button>'
         : "") ||
-      '<span class="when">—</span>';
+      '<span class="when">â€”</span>';
 
     return '<div class="row' + (isDone ? " is-done" : "") + '" data-id="' + esc(it.id) + '">' +
       '<div class="col-status">' + check + statusControl(it) + '</div>' +
@@ -2745,7 +2745,7 @@ create policy issues_delete_admin on public.issues
         };
 
     var btn = el("saveBtn");
-    busy(btn, true, "Saving…");
+    busy(btn, true, "Savingâ€¦");
     var work = editingId ? api.updateIssue(editingId, payload) : api.createIssue(payload);
 
     mutate(work, editingId ? "Changes saved" : "Issue reported")
@@ -2788,7 +2788,7 @@ create policy issues_delete_admin on public.issues
       }).length;
 
       return '<div class="row" data-uid="' + esc(u.id) + '">' +
-        '<div><span class="issue-title">' + esc(u.name || "—") + '</span>' +
+        '<div><span class="issue-title">' + esc(u.name || "â€”") + '</span>' +
           (isMe ? ' <span class="badge you">you</span>' : "") + '</div>' +
         '<div class="reporter"><span class="owner">' + esc(u.email) + '</span></div>' +
         '<div>' +
@@ -2798,7 +2798,7 @@ create policy issues_delete_admin on public.issues
             '<option value="admin"' + (u.role === "admin" ? " selected" : "") + '>Administrator</option>' +
           '</select>' +
         '</div>' +
-        '<div class="when">' + (u.createdAt ? timeAgo(u.createdAt) : "—") + '</div>' +
+        '<div class="when">' + (u.createdAt ? timeAgo(u.createdAt) : "â€”") + '</div>' +
         '<div style="text-align:right" class="when">' + reports + '</div>' +
         '<div class="col-actions">' +
           '<button class="btn ghost icon" data-user-action="edit" title="Edit user" aria-label="Edit user">' +
@@ -2905,7 +2905,7 @@ create policy issues_delete_admin on public.issues
     if (!self) patch.role = el("ufRole").value;
 
     var btn = el("userSave");
-    busy(btn, true, "Saving…");
+    busy(btn, true, "Savingâ€¦");
     api.updateUser(editingUserId, patch).then(function () {
       busy(btn, false);
       if (self) {
@@ -2950,7 +2950,7 @@ create policy issues_delete_admin on public.issues
   }
 
   /* ==================================================================
-     SETTINGS (admin) — backup, restore and maintenance
+     SETTINGS (admin) â€” backup, restore and maintenance
      ================================================================== */
   var LAST_BACKUP_KEY = "it.lastBackup";
   var pendingImport = null;
@@ -3013,12 +3013,12 @@ create policy issues_delete_admin on public.issues
     try { last = JSON.parse(localStorage.getItem(LAST_BACKUP_KEY) || "null"); } catch (e) {}
 
     var rows = [
-      ["Data source", api.mode === "demo" ? "Demo — this browser only" : "Supabase — shared"],
+      ["Data source", api.mode === "demo" ? "Demo â€” this browser only" : "Supabase â€” shared"],
       ["Signed in as", currentUser.email],
       ["Your role", isAdmin() ? "Administrator" : "Normal user"],
       ["Issues", String(issues.length)],
       ["Users", String(users.length)],
-      ["Last backup", last ? last.kind + " · " + timeAgo(last.at) : "never"]
+      ["Last backup", last ? last.kind + " Â· " + timeAgo(last.at) : "never"]
     ];
 
     el("statusList").innerHTML = rows.map(function (r) {
@@ -3037,7 +3037,7 @@ create policy issues_delete_admin on public.issues
     downloadFile("issue-tracker-backup-" + stamp() + ".json",
                  JSON.stringify(backupObject(), null, 2), "application/json");
     markBackup("JSON backup");
-    toast("Backup downloaded — " + issues.length + " issues");
+    toast("Backup downloaded â€” " + issues.length + " issues");
   });
 
   el("exportCsvBtn").addEventListener("click", function () {
@@ -3060,7 +3060,7 @@ create policy issues_delete_admin on public.issues
     downloadFile("issue-tracker-" + stamp() + ".csv",
                  "\uFEFF" + lines.join("\r\n"), "text/csv;charset=utf-8");
     markBackup("CSV export");
-    toast("CSV downloaded — " + issues.length + " issues");
+    toast("CSV downloaded â€” " + issues.length + " issues");
   });
 
   /* ---------- restore ---------- */
@@ -3111,7 +3111,7 @@ create policy issues_delete_admin on public.issues
         return;
       }
 
-      el("importName").textContent = file.name + " — " + pendingImport.length + " issues";
+      el("importName").textContent = file.name + " â€” " + pendingImport.length + " issues";
       el("importBtn").disabled = false;
     };
     reader.onerror = function () { toast("Could not read that file."); };
@@ -3130,7 +3130,7 @@ create policy issues_delete_admin on public.issues
     if (!confirm(msg)) return;
 
     var btn = el("importBtn");
-    busy(btn, true, "Restoring…");
+    busy(btn, true, "Restoringâ€¦");
 
     var work = (mode === "replace" ? api.deleteAllIssues() : Promise.resolve())
       .then(function () { return api.bulkCreateIssues(pendingImport); });
@@ -3158,7 +3158,7 @@ create policy issues_delete_admin on public.issues
     if (prompt("Type DELETE to confirm:") !== "DELETE") { toast("Cancelled"); return; }
 
     var btn = el("deleteAllBtn");
-    busy(btn, true, "Deleting…");
+    busy(btn, true, "Deletingâ€¦");
     api.deleteAllIssues().then(function () {
       busy(btn, false);
       toast("All issues deleted");
@@ -3170,7 +3170,7 @@ create policy issues_delete_admin on public.issues
   });
 
   /* ==================================================================
-     STATISTICS (everyone) — a read-only summary for review
+     STATISTICS (everyone) â€” a read-only summary for review
      ================================================================== */
   function computeStats(list) {
     var byStatus = { pending: 0, done: 0, none: 0 };
@@ -3280,7 +3280,7 @@ create policy issues_delete_admin on public.issues
   }
 
   /* ==================================================================
-     REPORTS (admin) — a printable summary
+     REPORTS (admin) â€” a printable summary
      ================================================================== */
   function reportList() {
     var from = el("repFrom").value ? new Date(el("repFrom").value + "T00:00:00").getTime() : null;
@@ -3386,7 +3386,7 @@ create policy issues_delete_admin on public.issues
 
     downloadFile("issue-report-" + stamp() + ".csv",
                  "\uFEFF" + lines.join("\r\n"), "text/csv;charset=utf-8");
-    toast("Report downloaded — " + list.length + " issues");
+    toast("Report downloaded â€” " + list.length + " issues");
   });
 
   el("repPrint").addEventListener("click", function () {
@@ -3396,7 +3396,7 @@ create policy issues_delete_admin on public.issues
   });
 
   /* ==================================================================
-     IDENTITY — top-bar avatar and the profile menu
+     IDENTITY â€” top-bar avatar and the profile menu
      ================================================================== */
   function initials(name, email) {
     var s = String(name || email || "?").trim();
@@ -3482,7 +3482,7 @@ create policy issues_delete_admin on public.issues
   el("bellBtn").addEventListener("click", function () { setView("notifications"); });
 
   /* ==================================================================
-     THEME — Auto / Light / Dark, remembered per browser
+     THEME â€” Auto / Light / Dark, remembered per browser
      ================================================================== */
   var THEME_KEY = "it.theme";
   var THEME_MODES = ["auto", "light", "dark"];
@@ -3567,7 +3567,7 @@ create policy issues_delete_admin on public.issues
   });
 
   /* ==================================================================
-     NOTIFICATIONS — derived from issue activity, filtered by preference
+     NOTIFICATIONS â€” derived from issue activity, filtered by preference
      ================================================================== */
   function buildNotifications() {
     if (!currentUser) return [];
@@ -3691,7 +3691,7 @@ create policy issues_delete_admin on public.issues
       highPriority: el("prefHigh").checked
     };
 
-    el("prefsNote").textContent = "Saving…";
+    el("prefsNote").textContent = "Savingâ€¦";
     api.updateProfile({ notify: notify }).then(function (u) {
       if (u) currentUser = u;
       else currentUser.notify = notify;
@@ -3722,7 +3722,7 @@ create policy issues_delete_admin on public.issues
   el("profSave").addEventListener("click", function () {
     var name = el("profName").value.trim();
     var btn = el("profSave");
-    busy(btn, true, "Saving…");
+    busy(btn, true, "Savingâ€¦");
     api.updateProfile({ name: name }).then(function (u) {
       busy(btn, false);
       if (u) currentUser = u;
@@ -3811,7 +3811,7 @@ create policy issues_delete_admin on public.issues
     if (!email || !password) { showMsg(err, "Enter your email and password."); return; }
 
     var btn = el("loginBtn");
-    busy(btn, true, "Signing in…");
+    busy(btn, true, "Signing inâ€¦");
     api.signIn(email, password).then(function (res) {
       busy(btn, false);
       currentUser = res.user;
@@ -3838,7 +3838,7 @@ create policy issues_delete_admin on public.issues
     if (password !== confirmPw) { showMsg(err, "The two passwords do not match."); return; }
 
     var btn = el("regBtn");
-    busy(btn, true, "Creating…");
+    busy(btn, true, "Creatingâ€¦");
     api.signUp({ email: email, password: password, fullName: name, role: role }).then(function (res) {
       busy(btn, false);
       el("loginEmail").value = email;
@@ -3851,7 +3851,7 @@ create policy issues_delete_admin on public.issues
       } else {
         currentUser = res.user;
         showApp();
-        toast("Account created — welcome!");
+        toast("Account created â€” welcome!");
       }
     }).catch(function (ex) {
       busy(btn, false);
@@ -3867,7 +3867,7 @@ create policy issues_delete_admin on public.issues
     if (!email) { showMsg(err, "Enter your email."); return; }
 
     var btn = el("forgotBtn");
-    busy(btn, true, "Sending…");
+    busy(btn, true, "Sendingâ€¦");
     api.sendReset(email).then(function (res) {
       busy(btn, false);
       if (res && res.demo) {
@@ -3907,7 +3907,7 @@ create policy issues_delete_admin on public.issues
     if (password !== confirmPw) { showMsg(err, "The two passwords do not match."); return; }
 
     var btn = el("resetBtn");
-    busy(btn, true, "Saving…");
+    busy(btn, true, "Savingâ€¦");
     api.updatePassword(resetEmail, password).then(function () {
       busy(btn, false);
       inRecovery = false;
@@ -3970,7 +3970,7 @@ create policy issues_delete_admin on public.issues
       ta.value = SETUP_SQL;
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand("copy"); done(); } catch (e) { toast("Copy failed — select the text manually"); }
+      try { document.execCommand("copy"); done(); } catch (e) { toast("Copy failed â€” select the text manually"); }
       ta.remove();
     }
   });
