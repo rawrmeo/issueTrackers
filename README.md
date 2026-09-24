@@ -158,10 +158,32 @@ Admins see a checkbox on every row. Tick one or more rows, or press
 **Select all**, and a bar appears above the table where you can
 **Apply status** (Pending / Done / None) or **Delete selected** in one go.
 
-### Theme
+### Night mode / Theme
 
-The button to the left of the bell cycles **Auto → Light → Dark**. **Auto**
-follows your operating system; the choice is remembered in this browser.
+Choose **Auto**, **Light** or **Night** under **My settings → Appearance**.
+**Auto** follows your device's light/dark setting; the choice is remembered in
+this browser. The button beside the bell is a quick shortcut that cycles the
+same three modes.
+
+### Repeated issues
+
+The **Reports** screen (admins) has a **Repeated issues** card. It groups issues
+whose titles match once case, spacing and punctuation are ignored
+("Login fails!" = "login fails"), so the same problem reported again is easy to
+spot. Each row shows the count, how many are still open, who reported them and
+when they were last touched. Admins also see a small **×N repeated** badge next
+to those titles on the board.
+
+### Message to the reporter
+
+When an administrator edits an issue there is an optional **Message to the
+reporter** box. Whatever is typed there is shown to the person who reported the
+issue (and to other admins) in a highlighted block on the issue — handy for
+explaining a fix after marking it **Done**.
+
+> This is the only feature that adds database columns (`admin_note`,
+> `admin_note_at`). Re-run `supabase-schema.sql` in the SQL Editor once and it
+> is ready. Nothing else changes.
 
 ### Keyboard shortcuts
 

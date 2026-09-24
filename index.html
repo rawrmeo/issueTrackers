@@ -119,6 +119,32 @@
     background: var(--surface-2); font: 600 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 
+  /* ============================ theme picker (Settings) ============================ */
+  .themepick { display: inline-flex; gap: 3px; background: var(--surface-2); padding: 3px; border-radius: 10px; }
+  .themebtn {
+    border: 0; background: transparent; color: var(--muted);
+    padding: 8px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 550;
+  }
+  .themebtn:hover { color: var(--text); }
+  .themebtn[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.09); }
+
+  /* ============================ repeated issues (admin) ============================ */
+  .pill.repeat { background: var(--surface-2); color: var(--muted); text-transform: none; }
+  .repeat-row { padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .repeat-row:last-child { border-bottom: 0; }
+  .repeat-head { display: flex; gap: 9px; align-items: center; }
+  .repeat-title { font-weight: 600; word-break: break-word; }
+  .repeat-meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+
+  /* ============================ admin message to the reporter ============================ */
+  .admin-note {
+    margin-top: 7px; padding: 8px 11px; border-radius: 9px;
+    background: var(--accent-soft); border-left: 3px solid var(--accent);
+    font-size: 12.5px; color: var(--text); word-break: break-word;
+  }
+  .admin-note b { color: var(--accent); font-weight: 650; }
+  .admin-note .when { margin-left: 6px; }
+
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
@@ -1043,6 +1069,12 @@
         </div>
       </section>
 
+      <section class="card" id="repeatedCard">
+        <h3>Repeated issues <span class="pill repeat" id="repeatedCount" hidden>0</span></h3>
+        <p class="card-sub">Issues whose title appears more than once &mdash; the same problem reported again. Use this to spot a recurring bug.</p>
+        <div id="repeatedList"></div>
+      </section>
+
       <section class="card" id="reportPrint">
         <div class="report-head">
           <h3 id="repTitle">Issue report</h3>
@@ -1189,6 +1221,17 @@
           <span class="card-note" id="prefsNote"></span>
         </div>
       </section>
+
+      <section class="card" id="appearanceCard">
+        <h3>Appearance</h3>
+        <p class="card-sub"><b>Night mode</b> is your choice. <b>Auto</b> follows your device's light or dark setting.</p>
+        <div class="themepick" role="group" aria-label="Theme">
+          <button type="button" class="themebtn" data-theme-opt="auto">Auto</button>
+          <button type="button" class="themebtn" data-theme-opt="light">Light</button>
+          <button type="button" class="themebtn" data-theme-opt="dark">Night</button>
+        </div>
+        <p class="card-note" id="themeNote" style="margin-top:10px;"></p>
+      </section>
     </div>
   </main>
 </div>
@@ -1226,6 +1269,11 @@
             <option value="high">High</option>
           </select>
         </div>
+      </div>
+      <div class="field" id="noteField" hidden>
+        <label for="fieldNote">Message to the reporter <span class="card-note">(optional)</span></label>
+        <textarea id="fieldNote" maxlength="1000" placeholder="e.g. Fixed in the latest update — the login bug was in the password check."></textarea>
+        <div class="hint">The person who reported this issue will see the message. Handy after you mark it Done.</div>
       </div>
       <div class="foot">
         <button type="button" class="btn" id="cancelBtn">Cancel</button>
@@ -1379,6 +1427,11 @@ alter table public.issues alter column created_by drop not null;
 alter table public.issues drop constraint if exists issues_created_by_fkey;
 alter table public.issues add constraint issues_created_by_fkey
   foreign key (created_by) references auth.users(id) on delete set null;
+
+-- A message an administrator can leave for the reporter after fixing an
+-- issue. Empty by default, so this is safe to add to an existing database.
+alter table public.issues add column if not exists admin_note    text        not null default '';
+alter table public.issues add column if not exists admin_note_at timestamptz not null default 'epoch';
 
 create index if not exists issues_status_idx     on public.issues (status);
 create index if not exists issues_created_by_idx on public.issues (created_by);
@@ -1857,7 +1910,9 @@ create policy issues_delete_admin on public.issues
             createdByName: currentUser.name || "",
             createdByEmail: currentUser.email,
             createdAt: Date.now(),
-            updatedAt: Date.now()
+            updatedAt: Date.now(),
+            adminNote: "",
+            adminNoteAt: 0
           };
           list.push(row);
           write(K_ISSUES, list);
@@ -2073,7 +2128,9 @@ create policy issues_delete_admin on public.issues
             createdByName: "",
             createdByEmail: r.created_by_email || "",
             createdAt: new Date(r.created_at).getTime(),
-            updatedAt: new Date(r.updated_at).getTime()
+            updatedAt: new Date(r.updated_at).getTime(),
+            adminNote: r.admin_note || "",
+            adminNoteAt: r.admin_note_at ? new Date(r.admin_note_at).getTime() : 0
           };
         });
       });
@@ -2094,7 +2151,14 @@ create policy issues_delete_admin on public.issues
     },
 
     updateIssue: function (id, patch) {
-      return sb.from("issues").update(patch).eq("id", id).then(function (res) {
+      // Translate the app's field names into database column names.
+      var row = {};
+      Object.keys(patch).forEach(function (k) {
+        if (k === "adminNote") row.admin_note = patch[k];
+        else if (k === "adminNoteAt") row.admin_note_at = new Date(patch[k]).toISOString();
+        else row[k] = patch[k];
+      });
+      return sb.from("issues").update(row).eq("id", id).then(function (res) {
         if (res.error) throw res.error;
       });
     },
@@ -2387,6 +2451,37 @@ create policy issues_delete_admin on public.issues
     return (b.updatedAt || 0) - (a.updatedAt || 0);
   }
 
+  /* ----------------------------------------------------------------
+     REPEATED ISSUES
+     Group issues whose titles match once case, spacing and punctuation
+     are ignored ("Login fails!" == "login fails"). Admins use this to
+     spot the same problem being reported again and again.
+     ---------------------------------------------------------------- */
+  var repeatIndex = {};
+
+  function normTitle(t) {
+    return String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  }
+
+  function buildRepeatIndex() {
+    var map = {};
+    issues.forEach(function (it) {
+      var k = normTitle(it.title);
+      if (!k) return;
+      (map[k] = map[k] || []).push(it);
+    });
+    return map;
+  }
+
+  function repeatGroups() {
+    var map = buildRepeatIndex();
+    return Object.keys(map).map(function (k) { return map[k]; })
+      .filter(function (g) { return g.length > 1; })
+      .sort(function (a, b) {
+        return b.length - a.length || (b[0].updatedAt || 0) - (a[0].updatedAt || 0);
+      });
+  }
+
   function visibleIssues() {
     var q = query.trim().toLowerCase();
     return baseIssues()
@@ -2429,6 +2524,7 @@ create policy issues_delete_admin on public.issues
 
   function render() {
     updateStats();
+    repeatIndex = buildRepeatIndex();
     var items = visibleIssues();
     listEl.innerHTML = items.length ? items.map(row).join("") : emptyState(baseIssues().length);
     updateBulkBar();
@@ -2482,6 +2578,18 @@ create policy issues_delete_admin on public.issues
       ? '<span class="pill stale" title="Open for ' + openDays(it) + ' days">Open ' + openDays(it) + 'd</span>'
       : "";
 
+    /* Admins see how often this title has been reported before. */
+    var repeats = can("manageUsers") ? (repeatIndex[normTitle(it.title)] || []).length : 0;
+    var repeatBadge = repeats > 1
+      ? '<span class="pill repeat" title="This title has been reported ' + repeats + ' times">\u00d7' + repeats + ' repeated</span>'
+      : "";
+
+    /* A message from an admin is shown to the reporter and to other admins. */
+    var adminNote = (it.adminNote && (isMine(it) || isAdmin()))
+      ? '<div class="admin-note"><b>Message from admin:</b> ' + esc(it.adminNote) +
+          (it.adminNoteAt ? '<span class="when">' + timeAgo(it.adminNoteAt) + '</span>' : "") + '</div>'
+      : "";
+
     var actions =
       (can("edit")
         ? '<button class="btn ghost icon" data-action="edit" title="Edit issue" aria-label="Edit issue">' +
@@ -2498,8 +2606,9 @@ create policy issues_delete_admin on public.issues
     return '<div class="row' + (isDone ? " is-done" : "") + '" data-id="' + esc(it.id) + '">' +
       '<div class="col-status">' + check + statusControl(it) + '</div>' +
       '<div>' +
-        '<div class="issue-title">' + esc(it.title) + stale + '</div>' +
+        '<div class="issue-title">' + esc(it.title) + stale + repeatBadge + '</div>' +
         (it.description ? '<div class="issue-desc">' + esc(it.description) + '</div>' : "") +
+        adminNote +
       '</div>' +
       '<div><span class="pill ' + esc(it.priority) + '">' + esc(it.priority) + '</span></div>' +
       '<div class="reporter"><span class="owner">' + esc(reporter) + '</span></div>' +
@@ -2674,6 +2783,7 @@ create policy issues_delete_admin on public.issues
   var fDesc = el("fieldDesc");
   var fStatus = el("fieldStatus");
   var fPriority = el("fieldPriority");
+  var fNote = el("fieldNote");
   var formErr = el("formErr");
 
   function openModal(issue) {
@@ -2696,6 +2806,13 @@ create policy issues_delete_admin on public.issues
     el("statusField").hidden = !canPickStatus;
     el("statusRow").classList.toggle("single", !canPickStatus);
 
+    // The "message to the reporter" box is for administrators editing an
+    // issue that already exists — on a brand-new issue there is nobody to
+    // message yet.
+    el("noteField").hidden = !can("edit") || !issue;
+    fNote.value = issue ? (issue.adminNote || "") : "";
+    fNote.disabled = lockDetails;
+
     showMsg(formErr, "");
     backdrop.classList.add("open");
     document.body.style.overflow = "hidden";
@@ -2708,7 +2825,7 @@ create policy issues_delete_admin on public.issues
     backdrop.classList.remove("open");
     document.body.style.overflow = "";
     editingId = null;
-    [fTitle, fDesc, fStatus, fPriority].forEach(function (f) { f.disabled = false; });
+    [fTitle, fDesc, fStatus, fPriority, fNote].forEach(function (f) { f.disabled = false; });
   }
 
   el("newBtn").addEventListener("click", function () { openModal(null); });
@@ -2743,6 +2860,18 @@ create policy issues_delete_admin on public.issues
           status: can("setStatus") ? fStatus.value : "none",
           priority: fPriority.value
         };
+
+    // Administrators can attach a message for the reporter. It is only sent
+    // when it actually changed, so a database that predates the column still
+    // works for ordinary edits.
+    if (can("edit") && !el("noteField").hidden) {
+      var note = fNote.value.trim();
+      var prevNote = (editingId && byId(editingId)) ? (byId(editingId).adminNote || "") : "";
+      if (note !== prevNote) {
+        payload.adminNote = note;
+        payload.adminNoteAt = Date.now();
+      }
+    }
 
     var btn = el("saveBtn");
     busy(btn, true, "Saving…");
@@ -3313,7 +3442,38 @@ create policy issues_delete_admin on public.issues
     }).join("") + '</tbody></table><div style="height:20px"></div>';
   }
 
+  function renderRepeated() {
+    var wrap = el("repeatedList");
+    if (!wrap) return;
+    var groups = repeatGroups();
+
+    var count = el("repeatedCount");
+    if (count) { count.hidden = groups.length === 0; count.textContent = groups.length; }
+
+    if (!groups.length) {
+      wrap.innerHTML = '<p class="card-note">No repeated issues right now. When the same title is reported more than once it will appear here.</p>';
+      return;
+    }
+
+    wrap.innerHTML = groups.map(function (g) {
+      var open = g.filter(function (i) { return i.status !== "done"; }).length;
+      var done = g.length - open;
+      var who = {};
+      g.forEach(function (i) { who[i.createdByEmail || "unknown"] = true; });
+      var when = Math.max.apply(null, g.map(function (i) { return i.updatedAt || 0; }));
+      return '<div class="repeat-row">' +
+        '<div class="repeat-head">' +
+          '<span class="pill repeat">\u00d7' + g.length + '</span>' +
+          '<span class="repeat-title">' + esc(g[0].title) + '</span>' +
+        '</div>' +
+        '<div class="repeat-meta">' + open + ' open \u00b7 ' + done + ' done \u00b7 reported by ' +
+          esc(Object.keys(who).join(", ")) + ' \u00b7 last ' + esc(timeAgo(when)) + '</div>' +
+      '</div>';
+    }).join("");
+  }
+
   function renderReport() {
+    renderRepeated();
     var list = reportList();
 
     var period = (el("repFrom").value || el("repTo").value)
@@ -3519,12 +3679,37 @@ create policy issues_delete_admin on public.issues
     }
     var icon = el("themeIcon");
     if (icon) icon.innerHTML = THEME_ICONS[mode] || THEME_ICONS.auto;
+
+    syncThemeUI();
   }
+
+  /* Keep the Settings buttons and the top-bar button showing the same mode. */
+  function themeLabel(mode) { return mode.charAt(0).toUpperCase() + mode.slice(1); }
+
+  function syncThemeUI() {
+    var mode = currentTheme();
+    document.querySelectorAll(".themebtn").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.themeOpt === mode));
+    });
+    var note = el("themeNote");
+    if (note) {
+      note.textContent = mode === "auto"
+        ? "Currently following your device."
+        : "Currently " + (mode === "dark" ? "Night" : "Light") + " mode.";
+    }
+  }
+
+  document.querySelectorAll(".themebtn").forEach(function (b) {
+    b.addEventListener("click", function () {
+      applyTheme(b.dataset.themeOpt);
+      toast("Theme: " + themeLabel(b.dataset.themeOpt));
+    });
+  });
 
   el("themeBtn").addEventListener("click", function () {
     var next = THEME_MODES[(THEME_MODES.indexOf(currentTheme()) + 1) % THEME_MODES.length];
     applyTheme(next);
-    toast("Theme: " + next.charAt(0).toUpperCase() + next.slice(1));
+    toast("Theme: " + themeLabel(next));
   });
 
   applyTheme(currentTheme());
@@ -3682,6 +3867,7 @@ create policy issues_delete_admin on public.issues
     el("prefDone").checked = p.statusDone !== false;
     el("prefHigh").checked = p.highPriority !== false;
     el("prefsNote").textContent = "";
+    syncThemeUI();
   }
 
   function savePrefs() {
