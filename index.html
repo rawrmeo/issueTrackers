@@ -625,20 +625,74 @@
     .nav-item { white-space: nowrap; }
   }
 
+  /* ---- mobile bottom navigation bar + drawer ---- */
+  .bottom-nav { display: none; }
+  .menu-btn, .drawer-backdrop { display: none; }
+
+  @media (max-width: 760px) {
+    /* The sidebar becomes a slide-in drawer, so everything - including the
+       admin views - is still reachable from the bottom bar's Menu button. */
+    .sidebar {
+      position: fixed; top: 0; bottom: 0; left: 0; width: 268px; z-index: 60;
+      transform: translateX(-100%); transition: transform .2s ease;
+      border-right: 1px solid var(--border); overflow-y: auto;
+      box-shadow: 0 0 40px rgba(0, 0, 0, .25);
+    }
+    .sidebar.open { transform: none; }
+    .drawer-backdrop {
+      display: block; position: fixed; inset: 0; z-index: 55;
+      background: rgba(9, 11, 16, .5);
+    }
+    .menu-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 38px; height: 38px; flex: none;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); border-radius: 10px; cursor: pointer;
+    }
+    .menu-btn svg { width: 18px; height: 18px; }
+
+    .bottom-nav {
+      display: grid; grid-template-columns: repeat(6, 1fr);
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding-bottom: env(safe-area-inset-bottom);
+      box-shadow: 0 -2px 12px rgba(16, 20, 30, .07);
+    }
+    .bn-item {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+      border: 0; background: none; color: var(--muted);
+      padding: 8px 2px 7px; font-size: 10px; font-weight: 600;
+      min-height: 56px; cursor: pointer;
+    }
+    .bn-item svg { width: 20px; height: 20px; }
+    .bn-item span { line-height: 1; }
+    .bn-item[aria-current="page"] { color: var(--accent); }
+    .bn-item:active { background: var(--surface-2); }
+
+    /* leave room for the bar so nothing hides behind it */
+    .main { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+
+    /* the toast was landing on top of the bar */
+    .toasts { bottom: calc(76px + env(safe-area-inset-bottom)); }
+
+    /* stack the toolbar, so the search box is not squeezed */
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .search { min-width: 0; width: 100%; }
+    .toolbar select { width: 100%; }
+  }
+
   /* ============================ responsive ============================ */
   @media (max-width: 900px) {
     .status-select { max-width: 100%; }
   }
   @media (max-width: 760px) {
     .shell { grid-template-columns: 1fr; }
-    .sidebar {
-      position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border);
-      flex-direction: column;
-    }
-    .sidebar .nav-label { display: none; }
-    .sidebar nav { display: flex; flex-wrap: wrap; gap: 6px; }
-    .nav-item { width: auto; }
-    .main { padding: 20px 16px 60px; }
+    /* NOTE: no .sidebar rules here. On a phone the sidebar is the slide-in
+       drawer defined in the mobile block above; a "position: static" rule here
+       would override that and leave the drawer taking up half the screen. */
+    .nav-label { display: none; }
+    /* bottom padding clears the fixed bottom bar */
+    .main { padding: 20px 16px calc(84px + env(safe-area-inset-bottom)); }
     /* table becomes stacked cards */
     .thead { display: none; }
     .row { grid-template-columns: 1fr; gap: 8px; padding: 14px 16px; position: relative; }
@@ -902,6 +956,11 @@
   <main class="main">
     <!-- top bar: notifications + profile menu -->
     <div class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Open navigation" style="margin-right:auto;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 6h18M3 12h18M3 18h18"/>
+        </svg>
+      </button>
       <button class="icon-btn" id="bellBtn" aria-label="Notifications" title="Notifications">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -1349,7 +1408,52 @@
       </section>
     </div>
   </main>
+
+  <!-- Mobile navigation: a bottom bar, the way a phone app does it. Only
+       shown on small screens; the sidebar takes over on a desktop. -->
+  <nav class="bottom-nav" aria-label="Main">
+    <button class="bn-item" id="bnMenuBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M3 6h18M3 12h18M3 18h18"/>
+      </svg>
+      <span>Menu</span>
+    </button>
+    <button class="bn-item" data-view="board" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/>
+        <rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>
+      </svg>
+      <span>Dashboard</span>
+    </button>
+    <button class="bn-item" data-view="mine">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+      <span>My reports</span>
+    </button>
+    <button class="bn-item" data-view="statistics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3v18h18"/><path d="M7 15v3M12 10v8M17 6v12"/>
+      </svg>
+      <span>Stats</span>
+    </button>
+    <button class="bn-item" data-view="notifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>
+      </svg>
+      <span>Alerts</span>
+    </button>
+    <button class="bn-item" data-view="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span>Profile</span>
+    </button>
+  </nav>
 </div>
+
+<!-- dims the page behind the mobile drawer -->
+<div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
 
 <!-- ==================================================================
      CREATE / EDIT ISSUE MODAL
@@ -3118,7 +3222,7 @@ alter table public.issues replica identity full;
      ================================================================== */
   function setView(next) {
     view = next;
-    document.querySelectorAll(".nav-item").forEach(function (b) {
+    document.querySelectorAll(".nav-item, .bn-item").forEach(function (b) {
       b.setAttribute("aria-current", b.dataset.view === view ? "page" : "false");
     });
 
@@ -3531,6 +3635,7 @@ alter table public.issues replica identity full;
                       b.dataset.view === "report" || b.dataset.view === "bin";
       if (adminOnly && !isAdmin()) { toast("Admins only."); return; }
       setView(b.dataset.view);
+      closeDrawer();               // on a phone the sidebar is an overlay
     });
   });
 
@@ -5113,6 +5218,38 @@ alter table public.issues replica identity full;
       try { document.execCommand("copy"); done(); } catch (e) { toast("Copy failed — select the text manually"); }
       ta.remove();
     }
+  });
+
+  /* ==================================================================
+     MOBILE DRAWER + BOTTOM BAR
+     ------------------------------------------------------------------
+     On a phone the sidebar slides in over the page, and the bottom bar is
+     the quick navigation. On a desktop none of this shows - the sidebar is
+     simply always there.
+     ================================================================== */
+  var sidebarEl = document.querySelector(".sidebar");
+
+  function openDrawer() {
+    if (!sidebarEl) return;
+    sidebarEl.classList.add("open");
+    el("drawerBackdrop").hidden = false;
+  }
+
+  function closeDrawer() {
+    if (!sidebarEl) return;
+    sidebarEl.classList.remove("open");
+    el("drawerBackdrop").hidden = true;
+  }
+
+  el("menuBtn").addEventListener("click", openDrawer);
+  el("bnMenuBtn").addEventListener("click", openDrawer);
+  el("drawerBackdrop").addEventListener("click", closeDrawer);
+
+  document.querySelectorAll(".bn-item[data-view]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      setView(b.dataset.view);
+      closeDrawer();
+    });
   });
 
   /* ==================================================================
